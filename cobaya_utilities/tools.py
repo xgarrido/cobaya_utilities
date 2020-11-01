@@ -1,16 +1,32 @@
 import glob
 import os
 
+import matplotlib.pyplot as plt
 
-def print_chains_size(chain_dirs, chain_names=None, tablefmt="html"):
-    chain_dirs = glob.glob(chain_dirs)
 
-    if chain_names is None:
-        chain_names = [os.path.basename(d) for d in chain_dirs]
+def print_chains_size(mcmc_dir, mcmc_names=None, tablefmt="html"):
+    """Print MCMC sample size given a set of directories
+
+    Parameters
+    ----------
+    mcmc_dir: str or list
+      a base directory holding the MCMC samples. Either a string holding regex expression
+      of a list of directories
+    mcmc_names: list
+      a list of names which corresponds to the directory names.
+    tablefmt: str
+      the format of the table (default: html)
+    """
+
+    if isinstance(mcmc_dir, str):
+        mcmc_dir = glob.glob(mcmc_dir)
+
+    if mcmc_names is None:
+        mcmc_names = [os.path.basename(d) for d in mcmc_dir]
 
     nchains = {}
-    for i, d in enumerate(chain_dirs):
-        key = chain_names[i]
+    for i, d in enumerate(mcmc_dir):
+        key = mcmc_names[i]
         files = sorted(glob.glob(os.path.join(d, "mcmc.?.txt")))
         nchains[key] = [sum(1 for line in open(f)) for f in files]
         nchains[key] += [sum(nchains[key])]
@@ -22,3 +38,47 @@ def print_chains_size(chain_dirs, chain_names=None, tablefmt="html"):
         headers=["mcmc {}".format(i) for i in range(1, 5)] + ["total"],
         tablefmt=tablefmt,
     )
+
+
+def plot_chains(mcmc_dir, params, title=None, nrow=None, ncol=None):
+    """Plot MCMC sample evolution
+
+    Parameters
+    ----------
+    mcmc_dir: str
+      a base directory holding the MCMC samples
+    params: list
+      a list of parameter names
+    title: str
+      a title for the figure
+    nrow: int
+      the number of rows within the plot
+    ncol: int
+      the number of columns within the plot
+    """
+
+    files = sorted(glob.glob(os.path.join(mcmc_dir, "mcmc.?.txt")))
+
+    fig = plt.figure(figsize=(15, 10))
+    if title is not None:
+        fig.suptitle(title)
+    nrow = (len(params) + 1) // 2 if nrow is None else nrow
+    ncol = (len(params) + 1) // 2 if ncol is None else ncol
+    ax = [plt.subplot(nrow, ncol, i + 1) for i in range(len(params))]
+
+    # Loop over files independently
+    for f in files:
+        from getdist import loadMCSamples
+
+        sample = loadMCSamples(f[:-4], no_cache=True)
+        color = "C{}".format(f.split(".")[-2])
+
+        # Get param lookup table
+        lookup = {
+            par.name: dict(pos=i, label=par.label)
+            for i, par in enumerate(sample.getParamNames().names)
+        }
+        for i, p in enumerate(params):
+            ax[i].set_ylabel(r"${}$".format(lookup[p].get("label")))
+            ax[i].plot(sample.samples[:, lookup[p].get("pos")], alpha=0.75, color=color)
+    plt.tight_layout()
