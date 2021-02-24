@@ -86,7 +86,7 @@ def plot_progress(mcmc_samples):
 
     nrow = (len(mcmc_samples) + 1) // 2
     ncol = 2
-    fig, ax = plt.subplots(2 * nrow, ncol, figsize=(15, 10), sharex=True)
+    fig, ax = plt.subplots(2 * nrow, ncol, figsize=(15, 5 * nrow), sharex=True)
 
     for i, (k, v) in enumerate(mcmc_samples.items()):
         files = sorted(glob.glob(os.path.join(v, "mcmc.?.progress")))
