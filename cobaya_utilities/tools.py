@@ -5,32 +5,22 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def print_chains_size(mcmc_dir, mcmc_names=None, tablefmt="html"):
+def print_chains_size(mcmc_samples, tablefmt="html"):
     """Print MCMC sample size given a set of directories
 
     Parameters
     ----------
-    mcmc_dir: str or list
-      a base directory holding the MCMC samples. Either a string holding regex expression
-      or a list of directories
-    mcmc_names: list
-      a list of names which corresponds to the directory names.
+    mcmc_samples: dict
+      a dict holding a name as key for the sample and a corresponding directory as value.
     tablefmt: str
       the format of the table (default: html)
     """
 
-    if isinstance(mcmc_dir, str):
-        mcmc_dir = glob.glob(mcmc_dir)
-
-    if mcmc_names is None:
-        mcmc_names = [os.path.basename(d) for d in mcmc_dir]
-
     nchains = {}
-    for i, d in enumerate(mcmc_dir):
-        key = mcmc_names[i]
-        files = sorted(glob.glob(os.path.join(d, "mcmc.?.txt")))
-        nchains[key] = [sum(1 for line in open(f)) for f in files]
-        nchains[key] += [sum(nchains[key])]
+    for k, v in mcmc_samples.items():
+        files = sorted(glob.glob(os.path.join(v, "mcmc.?.txt")))
+        nchains[k] = [sum(1 for line in open(f)) for f in files]
+        nchains[k] += [sum(nchains[k])]
 
     from tabulate import tabulate
 
@@ -85,30 +75,21 @@ def plot_chains(mcmc_dir, params, title=None, nrow=None, ncol=None):
     plt.tight_layout()
 
 
-def plot_progress(mcmc_dir, mcmc_names=None):
+def plot_progress(mcmc_samples):
     """Plot Gelman R-1 parameter and acceptance rate
 
     Parameters
     ----------
-    mcmc_dir: str or list
-      a base directory holding the MCMC samples. Either a string holding regex expression
-      or a list of directories
-    mcmc_names: list
-      a list of names which corresponds to the directory names.
+    mcmc_samples: dict
+      a dict holding a name as key for the sample and a corresponding directory as value.
     """
 
-    if isinstance(mcmc_dir, str):
-        mcmc_dir = glob.glob(mcmc_dir)
-
-    if mcmc_names is None:
-        mcmc_names = [os.path.basename(d) for d in mcmc_dir]
-
-    nrow = (len(mcmc_dir) + 1) // 2
-    ncol = (len(mcmc_dir) + 1) // 2
+    nrow = (len(mcmc_samples) + 1) // 2
+    ncol = 2
     fig, ax = plt.subplots(2 * nrow, ncol, figsize=(15, 10), sharex=True)
 
-    for i, d in enumerate(mcmc_dir):
-        files = sorted(glob.glob(os.path.join(d, "mcmc.?.progress")))
+    for i, (k, v) in enumerate(mcmc_samples.items()):
+        files = sorted(glob.glob(os.path.join(v, "mcmc.?.progress")))
         for f in files:
             cols = [a.strip() for a in open(f).readline().lstrip("#").split()]
             df = pd.read_csv(
@@ -120,5 +101,7 @@ def plot_progress(mcmc_dir, mcmc_names=None):
             ax[i, 0].set_ylabel(r"$R-1$")
             ax[i, 1].plot(df.N, df.acceptance_rate, "-o", **kwargs)
             ax[i, 1].set_ylabel(r"acceptance rate")
-        leg = ax[i, 1].legend(title=mcmc_names[i], bbox_to_anchor=(1, 1), loc="upper left")
+        leg = ax[i, 1].legend(
+            title=k, bbox_to_anchor=(1, 1), loc="upper left", labelcolor="linecolor"
+        )
         leg._legend_box.align = "left"
