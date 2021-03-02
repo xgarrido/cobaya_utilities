@@ -19,7 +19,10 @@ def print_chains_size(mcmc_samples, tablefmt="html"):
     nchains = {}
     for k, v in mcmc_samples.items():
         files = sorted(glob.glob(os.path.join(v, "mcmc.?.txt")))
-        nchains[k] = [sum(1 for line in open(f)) for f in files]
+        nchains[k] = 4 * [0]
+        for f in files:
+            i = int(f.split(".")[-2]) - 1
+            nchains[k][i] = sum(1 for line in open(f))
         nchains[k] += [sum(nchains[k])]
 
     from tabulate import tabulate
