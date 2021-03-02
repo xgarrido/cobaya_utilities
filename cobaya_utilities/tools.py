@@ -31,7 +31,7 @@ def print_chains_size(mcmc_samples, tablefmt="html"):
     )
 
 
-def plot_chains(mcmc_dir, params, title=None, nrow=None, ncol=None):
+def plot_chains(mcmc_dir, params, title=None, ncol=None):
     """Plot MCMC sample evolution
 
     Parameters
@@ -42,22 +42,18 @@ def plot_chains(mcmc_dir, params, title=None, nrow=None, ncol=None):
       a list of parameter names
     title: str
       a title for the figure
-    nrow: int
-      the number of rows within the plot
     ncol: int
       the number of columns within the plot
     """
-
-    files = sorted(glob.glob(os.path.join(mcmc_dir, "mcmc.?.txt")))
-
-    fig = plt.figure(figsize=(15, 10))
+    ncol = ncol if ncol is not None else len(params)
+    nrow = len(params) // ncol + 1 if ncol is not None else 1
+    fig = plt.figure(figsize=(15, 2 * nrow))
     if title is not None:
         fig.suptitle(title)
-    nrow = (len(params) + 1) // 2 if nrow is None else nrow
-    ncol = (len(params) + 1) // 2 if ncol is None else ncol
     ax = [plt.subplot(nrow, ncol, i + 1) for i in range(len(params))]
 
     # Loop over files independently
+    files = sorted(glob.glob(os.path.join(mcmc_dir, "mcmc.?.txt")))
     for f in files:
         from getdist import loadMCSamples
 
@@ -86,7 +82,7 @@ def plot_progress(mcmc_samples):
 
     nrow = (len(mcmc_samples) + 1) // 2
     ncol = 2
-    fig, ax = plt.subplots(2 * nrow, ncol, figsize=(15, 5 * nrow), sharex=True)
+    fig, ax = plt.subplots(2 * nrow, ncol, figsize=(15, 10), sharex=True)
 
     for i, (k, v) in enumerate(mcmc_samples.items()):
         files = sorted(glob.glob(os.path.join(v, "mcmc.?.progress")))
@@ -96,7 +92,7 @@ def plot_progress(mcmc_samples):
                 f, names=cols, comment="#", sep=" ", skipinitialspace=True, index_col=False
             )
             idx = f.split(".")[-2]
-            kwargs = dict(label="mcmc #{}".format(idx), color="C{}".format(idx), alpha=0.75)
+            kwargs = dict(label=f"mcmc #{idx}", color="C{}".format(idx), alpha=0.75)
             ax[i, 0].semilogy(df.N, df.Rminus1, "-o", **kwargs)
             ax[i, 0].set_ylabel(r"$R-1$")
             ax[i, 1].plot(df.N, df.acceptance_rate, "-o", **kwargs)
