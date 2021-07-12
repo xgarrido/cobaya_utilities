@@ -1,40 +1,90 @@
 import glob
 import os
+import re
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 
-def print_chains_size(mcmc_samples, tablefmt="html"):
+def print_chains_size(mcmc_samples):
     """Print MCMC sample size given a set of directories
 
     Parameters
     ----------
     mcmc_samples: dict
       a dict holding a name as key for the sample and a corresponding directory as value.
-    tablefmt: str
-      the format of the table (default: html)
     """
 
-    nchains = {}
+    nchains, status = {}, {}
     for k, v in mcmc_samples.items():
         files = sorted(glob.glob(os.path.join(v, "mcmc.?.txt")))
         nchains[k] = 4 * [0]
+        status[k] = 5 * [""]
+        total = 0
         for f in files:
             i = int(f.split(".")[-2]) - 1
             nchains[k][i] = sum(1 for line in open(f))
-        nchains[k] += [sum(nchains[k])]
+            total += nchains[k][i]
+            # Check status
+            for line in open(f.replace(".txt", ".log")):
+                if "[mcmc] The run has converged!" in line:
+                    status[k][i] = "done"
+                if "[mcmc] *ERROR*" in line:
+                    status[k][i] = "error"
+        nchains[k] += [total]
+        if sum(np.array(status[k]) == "done") == 4:
+            status[k][-1] = "done"
 
-    from tabulate import tabulate
+    df = pd.DataFrame(nchains, index=[f"mcmc {i}" for i in range(1, 5)] + ["total"]).T
+    status = pd.DataFrame(status, index=[f"mcmc {i}" for i in range(1, 5)] + ["total"]).T
 
-    return tabulate(
-        [(k, *v) for k, v in nchains.items()],
-        headers=["mcmc {}".format(i) for i in range(1, 5)] + ["total"],
-        tablefmt=tablefmt,
-    )
+    def _style_table(x):
+        df1 = pd.DataFrame("", index=x.index, columns=x.columns)
+        mask = status == "done"
+        df1[mask] = "background-color: lightgreen"
+        mask = status == "error"
+        df1[mask] = "background-color: lightcoral"
+        return df1
+
+    return df.style.apply(_style_table, axis=None)
 
 
-def plot_chains(mcmc_dir, params, title=None, ncol=None):
+def print_results(mcmc_samples, params, labels, limit=1):
+    """Print results given a set of MCMC samples and a list of parameters
+
+    Parameters
+    ----------
+    mcmc_samples: list
+      a list of MCSamples.
+    params: list
+      a list of parameters.
+    labels: list
+      a list of labels to be used a row index.
+    limit: int
+      the confidence limit of the results (default: 1 i.e. 68%).
+    """
+    d = {}
+
+    r = re.compile(r".*\$(.*)\$.*&.*\$(.*)\$.*")
+    for sample in mcmc_samples:
+        result = sample.getTable(limit=limit, paramList=params)
+
+        for line in result.lines:
+            found = r.findall(line)
+            if len(found):
+                name, value = found[0]
+                name, value = f"${name}$", f"${value}$"
+                if d.get(name):
+                    d[name] += [value]
+                else:
+                    d[name] = [value]
+
+    df = pd.DataFrame(d, index=labels)
+    return df
+
+
+def plot_chains(mcmc_dir, params, title=None, ncol=None, ignore_rows=0.0, no_cache=False):
     """Plot MCMC sample evolution
 
     Parameters
@@ -60,7 +110,7 @@ def plot_chains(mcmc_dir, params, title=None, ncol=None):
     for f in files:
         from getdist import loadMCSamples
 
-        sample = loadMCSamples(f[:-4], no_cache=True)
+        sample = loadMCSamples(f[:-4], no_cache=no_cache, settings={"ignore_rows": ignore_rows})
         color = "C{}".format(f.split(".")[-2])
 
         # Get param lookup table
@@ -85,7 +135,7 @@ def plot_progress(mcmc_samples):
 
     nrow = (len(mcmc_samples) + 1) // 2
     ncol = 2
-    fig, ax = plt.subplots(2 * nrow, ncol, figsize=(15, 10), sharex=True)
+    fig, ax = plt.subplots(2 * nrow, ncol, figsize=(15, 5 * nrow), sharex=True)
 
     for i, (k, v) in enumerate(mcmc_samples.items()):
         files = sorted(glob.glob(os.path.join(v, "mcmc.?.progress")))
