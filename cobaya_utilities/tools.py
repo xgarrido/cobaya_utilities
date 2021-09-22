@@ -35,12 +35,17 @@ def print_chains_size(mcmc_samples):
         nchains[k] += [total]
         if sum(np.array(status[k]) == "done") == 4:
             status[k][-1] = "done"
+        for i, n in enumerate(nchains[k]):
+            if n / total < 0.10 and status[k][i] == "":
+                status[k][i] = "warning"
 
     df = pd.DataFrame(nchains, index=[f"mcmc {i}" for i in range(1, 5)] + ["total"]).T
     status = pd.DataFrame(status, index=[f"mcmc {i}" for i in range(1, 5)] + ["total"]).T
 
     def _style_table(x):
         df1 = pd.DataFrame("", index=x.index, columns=x.columns)
+        mask = status == "warning"
+        df1[mask] = "background-color: bisque"
         mask = status == "done"
         df1[mask] = "background-color: lightgreen"
         mask = status == "error"
