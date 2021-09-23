@@ -7,13 +7,17 @@ import numpy as np
 import pandas as pd
 
 
-def print_chains_size(mcmc_samples):
+def print_chains_size(mcmc_samples, with_bar=True, bar_color="#b9b9b9"):
     """Print MCMC sample size given a set of directories
 
     Parameters
     ----------
     mcmc_samples: dict
       a dict holding a name as key for the sample and a corresponding directory as value.
+    with_bar: bool
+      showing an histogram bar for each cell given the number of mcmc samples
+    bar_color: str
+      bar color as hex string
     """
 
     nchains, status = {}, {}
@@ -43,16 +47,20 @@ def print_chains_size(mcmc_samples):
     status = pd.DataFrame(status, index=[f"mcmc {i}" for i in range(1, 5)] + ["total"]).T
 
     def _style_table(x):
+        css_tmpl = "background-color: {}"
         df1 = pd.DataFrame("", index=x.index, columns=x.columns)
         mask = status == "warning"
-        df1[mask] = "background-color: bisque"
+        df1[mask] = css_tmpl.format("bisque")
         mask = status == "done"
-        df1[mask] = "background-color: lightgreen"
+        df1[mask] = css_tmpl.format("lightgreen")
         mask = status == "error"
-        df1[mask] = "background-color: lightcoral"
+        df1[mask] = css_tmpl.format("lightcoral")
         return df1
 
-    return df.style.apply(_style_table, axis=None)
+    s = df.style
+    if with_bar:
+        s = s.bar(color=bar_color)
+    return s.apply(_style_table, axis=None)
 
 
 def print_results(mcmc_samples, params, labels, limit=1):
