@@ -23,6 +23,7 @@ def print_chains_size(mcmc_samples, with_bar=True, bar_color="#b9b9b9"):
     nchains, status = {}, {}
     for k, v in mcmc_samples.items():
         files = sorted(glob.glob(os.path.join(v, "mcmc.?.txt")))
+        assert len(files) > 0, "Missing mcmc chains!"
         nchains[k] = 4 * [0]
         status[k] = 5 * [""]
         total = 0
@@ -111,18 +112,17 @@ def plot_chains(mcmc_dir, params, title=None, ncol=None, ignore_rows=0.0, no_cac
     ncol: int
       the number of columns within the plot
     """
+    from getdist import loadMCSamples
+
     ncol = ncol if ncol is not None else len(params)
     nrow = len(params) // ncol + 1 if ncol is not None else 1
     fig = plt.figure(figsize=(15, 2 * nrow))
-    if title is not None:
-        fig.suptitle(title)
+    fig.suptitle(title)
     ax = [plt.subplot(nrow, ncol, i + 1) for i in range(len(params))]
 
     # Loop over files independently
     files = sorted(glob.glob(os.path.join(mcmc_dir, "mcmc.?.txt")))
     for f in files:
-        from getdist import loadMCSamples
-
         sample = loadMCSamples(f[:-4], no_cache=no_cache, settings={"ignore_rows": ignore_rows})
         color = "C{}".format(f.split(".")[-2])
 
