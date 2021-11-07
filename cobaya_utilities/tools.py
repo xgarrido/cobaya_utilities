@@ -117,7 +117,6 @@ def plot_chains(mcmc_dir, params, title=None, ncol=None, ignore_rows=0.0, no_cac
     ncol = ncol if ncol is not None else len(params)
     nrow = len(params) // ncol + 1 if ncol is not None else 1
     fig = plt.figure(figsize=(15, 2 * nrow))
-    fig.suptitle(title)
     ax = [plt.subplot(nrow, ncol, i + 1) for i in range(len(params))]
 
     # Loop over files independently
@@ -134,6 +133,12 @@ def plot_chains(mcmc_dir, params, title=None, ncol=None, ignore_rows=0.0, no_cac
         for i, p in enumerate(params):
             ax[i].set_ylabel(r"${}$".format(lookup[p].get("label")))
             ax[i].plot(sample.samples[:, lookup[p].get("pos")], alpha=0.75, color=color)
+    leg = fig.legend(
+        [f"mcmc #{i}" for i in range(1, len(files) + 1)],
+        bbox_to_anchor=(1.1, 0.6),
+        labelcolor="linecolor",
+        title=title,
+    )
     plt.tight_layout()
 
 
@@ -145,10 +150,9 @@ def plot_progress(mcmc_samples):
     mcmc_samples: dict
       a dict holding a name as key for the sample and a corresponding directory as value.
     """
-
-    nrow = (len(mcmc_samples) + 1) // 2
-    ncol = 2
-    fig, ax = plt.subplots(2 * nrow, ncol, figsize=(15, 5 * nrow), sharex=True)
+    nrows = len(mcmc_samples)
+    ncols = 2
+    fig, ax = plt.subplots(nrows, ncols, figsize=(15, 4 * nrows), sharex=True)
 
     for i, (k, v) in enumerate(mcmc_samples.items()):
         files = sorted(glob.glob(os.path.join(v, "mcmc.?.progress")))
@@ -158,9 +162,10 @@ def plot_progress(mcmc_samples):
                 f, names=cols, comment="#", sep=" ", skipinitialspace=True, index_col=False
             )
             idx = f.split(".")[-2]
-            kwargs = dict(label=f"mcmc #{idx}", color="C{}".format(idx), alpha=0.75)
+            kwargs = dict(label=f"mcmc #{idx}", color=f"C{idx}", alpha=0.75)
             ax[i, 0].semilogy(df.N, df.Rminus1, "-o", **kwargs)
             ax[i, 0].set_ylabel(r"$R-1$")
+
             ax[i, 1].plot(df.N, df.acceptance_rate, "-o", **kwargs)
             ax[i, 1].set_ylabel(r"acceptance rate")
         leg = ax[i, 1].legend(
