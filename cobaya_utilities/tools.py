@@ -80,20 +80,17 @@ def print_results(mcmc_samples, params, labels, limit=1):
     """
     d = {}
 
-    r = re.compile(r".*\$(.*)\$.*&.*\$(.*)\$.*")
-    for sample in mcmc_samples:
-        result = sample.getTable(limit=limit, paramList=params)
-
-        for line in result.lines:
-            found = r.findall(line)
-            if len(found):
-                name, value = found[0]
-                name, value = f"${name}$", f"${value}$"
-                if d.get(name):
-                    d[name] += [value]
-                else:
-                    d[name] = [value]
-
+    r = re.compile(r"(.*)(=|<|>)(.*)")
+    for param in params:
+        for sample in mcmc_samples:
+            found = r.findall(sample.getInlineLatex(param, limit=limit))
+            assert (
+                len(found) == 1
+            ), f"Something gets wrong when retrieving limits for '{param}' parameter!"
+            name, sign, value = found[0]
+            d.setdefault(f"${name}$", []).append(
+                f"${value}$" if sign == "=" else f"${sign}{value}$"
+            )
     df = pd.DataFrame(d, index=labels)
     return df
 
@@ -139,6 +136,7 @@ def plot_chains(mcmc_dir, params, title=None, ncol=None, ignore_rows=0.0, no_cac
         labelcolor="linecolor",
         title=title,
     )
+    leg._legend_box.align = "left"
     plt.tight_layout()
 
 
