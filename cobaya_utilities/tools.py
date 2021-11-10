@@ -50,12 +50,10 @@ def print_chains_size(mcmc_samples, with_bar=True, bar_color="#b9b9b9"):
     def _style_table(x):
         css_tmpl = "background-color: {}"
         df1 = pd.DataFrame("", index=x.index, columns=x.columns)
-        mask = status == "warning"
-        df1[mask] = css_tmpl.format("bisque")
-        mask = status == "done"
-        df1[mask] = css_tmpl.format("lightgreen")
-        mask = status == "error"
-        df1[mask] = css_tmpl.format("lightcoral")
+        colors = dict(warning="bisque", done="lightgreen", error="lightcoral")
+        for state, color in colors.items():
+            mask = status == state
+            df1[mask] = css_tmpl.format(color)
         return df1
 
     s = df.style
@@ -132,8 +130,9 @@ def plot_chains(mcmc_dir, params, title=None, ncol=None, ignore_rows=0.0, no_cac
             ax[i].plot(sample.samples[:, lookup[p].get("pos")], alpha=0.75, color=color)
     leg = fig.legend(
         [f"mcmc #{i}" for i in range(1, len(files) + 1)],
-        bbox_to_anchor=(1.1, 0.6),
+        bbox_to_anchor=(1.0, 0.6),
         labelcolor="linecolor",
+        loc="upper left",
         title=title,
     )
     leg._legend_box.align = "left"
