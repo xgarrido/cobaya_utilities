@@ -149,7 +149,8 @@ def plot_progress(mcmc_samples):
     """
     nrows = len(mcmc_samples)
     ncols = 2
-    fig, ax = plt.subplots(nrows, ncols, figsize=(15, 4 * nrows), sharex=True)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 4 * nrows), sharex=True)
+    axes = np.atleast_2d(axes)
 
     for i, (k, v) in enumerate(mcmc_samples.items()):
         files = sorted(glob.glob(os.path.join(v, "mcmc.?.progress")))
@@ -160,12 +161,12 @@ def plot_progress(mcmc_samples):
             )
             idx = f.split(".")[-2]
             kwargs = dict(label=f"mcmc #{idx}", color=f"C{idx}", alpha=0.75)
-            ax[i, 0].semilogy(df.N, df.Rminus1, "-o", **kwargs)
-            ax[i, 0].set_ylabel(r"$R-1$")
+            axes[i, 0].semilogy(df.N, df.Rminus1, "-o", **kwargs)
+            axes[i, 0].set_ylabel(r"$R-1$")
 
-            ax[i, 1].plot(df.N, df.acceptance_rate, "-o", **kwargs)
-            ax[i, 1].set_ylabel(r"acceptance rate")
-        leg = ax[i, 1].legend(
+            axes[i, 1].plot(df.N, df.acceptance_rate, "-o", **kwargs)
+            axes[i, 1].set_ylabel(r"acceptance rate")
+        leg = axes[i, 1].legend(
             title=k, bbox_to_anchor=(1, 1), loc="upper left", labelcolor="linecolor"
         )
         leg._legend_box.align = "left"
