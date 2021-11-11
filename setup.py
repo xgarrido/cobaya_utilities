@@ -18,5 +18,5 @@ setup(
         "Topic :: Scientific/Engineering :: Visualization",
         "Topic :: Education",
     ],
-    install_requires=["matplotlib", "tabulate", "getdist", "pandas"],
+    install_requires=["matplotlib", "getdist", "pandas"],
 )

@@ -86,6 +86,8 @@ def print_results(mcmc_samples, params, labels, limit=1):
                 len(found) == 1
             ), f"Something gets wrong when retrieving limits for '{param}' parameter!"
             name, sign, value = found[0]
+            if "---" in value:
+                value = " "
             d.setdefault(f"${name}$", []).append(
                 f"${value}$" if sign == "=" else f"${sign}{value}$"
             )
@@ -170,3 +172,4 @@ def plot_progress(mcmc_samples):
             title=k, bbox_to_anchor=(1, 1), loc="upper left", labelcolor="linecolor"
         )
         leg._legend_box.align = "left"
+    plt.tight_layout()
