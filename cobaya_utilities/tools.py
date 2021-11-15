@@ -7,7 +7,17 @@ import numpy as np
 import pandas as pd
 
 
-def print_chains_size(mcmc_samples, with_bar=True, bar_color="#b9b9b9"):
+def _get_chain_filenames(path, prefix="mcmc.", suffix=".txt"):
+    return sorted(
+        [
+            f
+            for f in glob.glob(os.path.join(path, f"{prefix}*{suffix}"))
+            if re.match(f"{prefix}[0-9]+{suffix}", os.path.basename(f))
+        ]
+    )
+
+
+def print_chains_size(mcmc_samples, with_bar=False, bar_color="#b9b9b9"):
     """Print MCMC sample size given a set of directories
 
     Parameters
@@ -20,32 +30,33 @@ def print_chains_size(mcmc_samples, with_bar=True, bar_color="#b9b9b9"):
       bar color as hex string
     """
 
+    index = set()
     nchains, status = {}, {}
-    for k, v in mcmc_samples.items():
-        files = sorted(glob.glob(os.path.join(v, "mcmc.?.txt")))
-        assert len(files) > 0, "Missing mcmc chains!"
-        nchains[k] = 4 * [0]
-        status[k] = 5 * [""]
+    for name, path in mcmc_samples.items():
+        files = _get_chain_filenames(path)
+        assert len(files) > 0, f"Missing mcmc chains in '{path}' directory!"
+        nchains[name], status[name] = len(files) * [0], (len(files) + 1) * [""]
         total = 0
         for f in files:
             i = int(f.split(".")[-2]) - 1
-            nchains[k][i] = sum(1 for line in open(f))
-            total += nchains[k][i]
+            index.add(f"mcmc {i + 1}")
+            nchains[name][i] = sum(1 for line in open(f))
+            total += nchains[name][i]
             # Check status
             for line in open(f.replace(".txt", ".log")):
                 if "[mcmc] The run has converged!" in line:
-                    status[k][i] = "done"
+                    status[name][i] = "done"
                 if "[mcmc] *ERROR*" in line:
-                    status[k][i] = "error"
-        nchains[k] += [total]
-        if sum(np.array(status[k]) == "done") == 4:
-            status[k][-1] = "done"
-        for i, n in enumerate(nchains[k]):
-            if n / total < 0.10 and status[k][i] == "":
-                status[k][i] = "warning"
+                    status[name][i] = "error"
+        nchains[name] += [total]
+        if sum(np.array(status[name]) == "done") == len(files):
+            status[name][-1] = "done"
+        for i, n in enumerate(nchains[name]):
+            if n / total < 0.10 and status[name][i] == "":
+                status[name][i] = "warning"
 
-    df = pd.DataFrame(nchains, index=[f"mcmc {i}" for i in range(1, 5)] + ["total"]).T
-    status = pd.DataFrame(status, index=[f"mcmc {i}" for i in range(1, 5)] + ["total"]).T
+    df = pd.DataFrame(nchains, index=sorted(index.union({"total"}))).T
+    status = pd.DataFrame(status, index=sorted(index.union({"total"}))).T
 
     def _style_table(x):
         css_tmpl = "background-color: {}"
@@ -91,11 +102,13 @@ def print_results(mcmc_samples, params, labels, limit=1):
             d.setdefault(f"${name}$", []).append(
                 f"${value}$" if sign == "=" else f"${sign}{value}$"
             )
-    df = pd.DataFrame(d, index=labels)
+    df = pd.DataFrame(d, index=labels[: len(mcmc_samples)])
     return df
 
 
-def plot_chains(mcmc_dir, params, title=None, ncol=None, ignore_rows=0.0, no_cache=False):
+def plot_chains(
+    mcmc_dir, params, title=None, ncol=None, highlight_burnin=0.4, ignore_rows=0.0, no_cache=False
+):
     """Plot MCMC sample evolution
 
     Parameters
@@ -108,8 +121,13 @@ def plot_chains(mcmc_dir, params, title=None, ncol=None, ignore_rows=0.0, no_cac
       a title for the figure
     ncol: int
       the number of columns within the plot
+    ignore_rows: float
+      the fraction of samples to ignore
+    no_cache: bool
+      remove the getdist cache
     """
     from getdist import loadMCSamples
+    from matplotlib.lines import Line2D
 
     ncol = ncol if ncol is not None else len(params)
     nrow = len(params) // ncol + 1 if ncol is not None else 1
@@ -117,10 +135,10 @@ def plot_chains(mcmc_dir, params, title=None, ncol=None, ignore_rows=0.0, no_cac
     ax = [plt.subplot(nrow, ncol, i + 1) for i in range(len(params))]
 
     # Loop over files independently
-    files = sorted(glob.glob(os.path.join(mcmc_dir, "mcmc.?.txt")))
+    files = _get_chain_filenames(mcmc_dir)
     for f in files:
         sample = loadMCSamples(f[:-4], no_cache=no_cache, settings={"ignore_rows": ignore_rows})
-        color = "C{}".format(f.split(".")[-2])
+        color = f"C{f.split('.')[-2]}"
 
         # Get param lookup table
         lookup = {
@@ -129,9 +147,16 @@ def plot_chains(mcmc_dir, params, title=None, ncol=None, ignore_rows=0.0, no_cac
         }
         for i, p in enumerate(params):
             ax[i].set_ylabel(r"${}$".format(lookup[p].get("label")))
-            ax[i].plot(sample.samples[:, lookup[p].get("pos")], alpha=0.75, color=color)
+            y = sample.samples[:, lookup[p].get("pos")]
+            x = np.arange(len(y))
+            idx_burnin = -int(highlight_burnin * len(y))
+            ax[i].plot(x[idx_burnin:], y[idx_burnin:], alpha=0.75, color=color)
+            if highlight_burnin > 0.0:
+                ax[i].plot(x[:idx_burnin], y[:idx_burnin], alpha=0.25, color=color)
+
     leg = fig.legend(
-        [f"mcmc #{i}" for i in range(1, len(files) + 1)],
+        [Line2D([0], [0], color=f"C{f.split('.')[-2]}") for f in files],
+        [f"mcmc #{f.split('.')[-2]}" for f in files],
         bbox_to_anchor=(1.0, 0.6),
         labelcolor="linecolor",
         loc="upper left",
@@ -151,11 +176,11 @@ def plot_progress(mcmc_samples):
     """
     nrows = len(mcmc_samples)
     ncols = 2
-    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 4 * nrows), sharex=True)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 3 * nrows), sharex=True)
     axes = np.atleast_2d(axes)
 
     for i, (k, v) in enumerate(mcmc_samples.items()):
-        files = sorted(glob.glob(os.path.join(v, "mcmc.?.progress")))
+        files = _get_chain_filenames(v, suffix=".progress")
         for f in files:
             cols = [a.strip() for a in open(f).readline().lstrip("#").split()]
             df = pd.read_csv(
