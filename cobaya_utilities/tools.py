@@ -73,12 +73,12 @@ def print_chains_size(mcmc_samples, with_bar=False, bar_color="#b9b9b9"):
     return s.apply(_style_table, axis=None)
 
 
-def print_results(mcmc_samples, params, labels, limit=1):
+def print_results(samples, params, labels, limit=1):
     """Print results given a set of MCMC samples and a list of parameters
 
     Parameters
     ----------
-    mcmc_samples: list
+    samples: list
       a list of MCSamples.
     params: list
       a list of parameters.
@@ -88,21 +88,27 @@ def print_results(mcmc_samples, params, labels, limit=1):
       the confidence limit of the results (default: 1 i.e. 68%).
     """
     d = {}
-
     r = re.compile(r"(.*)(=|<|>)(.*)")
     for param in params:
-        for sample in mcmc_samples:
-            found = r.findall(sample.getInlineLatex(param, limit=limit))
+        for sample in samples:
+            latex = None
+            for par in param.split("|"):
+                if sample.getParamNames().hasParam(par):
+                    latex = sample.getInlineLatex(par, limit=limit)
+                    break
+            assert latex is not None, f"Parameter '{param}' not found!"
+            found = r.findall(latex)
             assert (
                 len(found) == 1
             ), f"Something gets wrong when retrieving limits for '{param}' parameter!"
             name, sign, value = found[0]
+            name = name.replace(" ", "")
             if "---" in value:
-                value = " "
+                value = "$-$"
             d.setdefault(f"${name}$", []).append(
                 f"${value}$" if sign == "=" else f"${sign}{value}$"
             )
-    df = pd.DataFrame(d, index=labels[: len(mcmc_samples)])
+    df = pd.DataFrame(d, index=labels[: len(samples)])
     return df
 
 
