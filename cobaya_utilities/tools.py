@@ -95,6 +95,8 @@ def print_results(samples, params, labels, limit=1):
             for par in param.split("|"):
                 if sample.getParamNames().hasParam(par):
                     latex = sample.getInlineLatex(par, limit=limit)
+                    if "<" in latex or ">" in latex:
+                        latex = sample.getInlineLatex(par, limit=2)
                     break
             assert latex is not None, f"Parameter '{param}' not found!"
             found = r.findall(latex)
