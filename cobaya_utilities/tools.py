@@ -124,6 +124,7 @@ def plot_chains(
     highlight_burnin=0.4,
     ignore_rows=0.0,
     show_mean_std=True,
+    show_only_mcmc=None,
     no_cache=False,
 ):
     """Plot MCMC sample evolution
@@ -143,6 +144,8 @@ def plot_chains(
       the fraction of samples to ignore
     show_mean_std: bool
       show the mean/std values over the different samples
+    show_only_mcmc: int or list
+      only show chains given their number
     no_cache: bool
       remove the getdist cache
     """
@@ -151,6 +154,13 @@ def plot_chains(
 
     if not isinstance(params, (list, dict)):
         raise ValueError("Parameter list must be either a list or a dict!")
+
+    if show_only_mcmc is not None:
+        if not isinstance(show_only_mcmc, (int, list)):
+            raise ValueError("Parameter 'show_only_mcmc' must be either a int or a list of int!")
+        if isinstance(show_only_mcmc, int):
+            show_only_mcmc = [show_only_mcmc]
+
     default_params = params
     stored_axes = {}
 
@@ -164,6 +174,9 @@ def plot_chains(
         chains = {}
         min_chain_size = np.inf
         for f in files:
+            imcmc = int(f.split(".")[-2])
+            if show_only_mcmc and imcmc not in show_only_mcmc:
+                continue
             sample = loadMCSamples(f[:-4], no_cache=no_cache, settings={"ignore_rows": ignore_rows})
 
             # Get param lookup table
@@ -180,7 +193,7 @@ def plot_chains(
                 fig = plt.figure(figsize=(15, 2 * nrow))
                 axes = [plt.subplot(nrow, ncol, i + 1) for i in range(len(params))]
 
-            color = f"C{f.split('.')[-2]}"
+            color = f"C{imcmc}"
             if sample.samples.shape[0] < min_chain_size:
                 min_chain_size = sample.samples.shape[0]
             for i, p in enumerate(params):
