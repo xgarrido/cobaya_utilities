@@ -2,9 +2,12 @@ import glob
 import os
 import re
 
+import getdist
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+getdist.chains.print_load_details = False
 
 
 def _get_chain_filenames(path, prefix="mcmc.", suffix=".txt"):
@@ -115,63 +118,102 @@ def print_results(samples, params, labels, limit=1):
 
 
 def plot_chains(
-    mcmc_dir, params, title=None, ncol=None, highlight_burnin=0.4, ignore_rows=0.0, no_cache=False
+    mcmc_samples,
+    params,
+    ncol=None,
+    highlight_burnin=0.4,
+    ignore_rows=0.0,
+    show_mean_std=True,
+    no_cache=False,
 ):
     """Plot MCMC sample evolution
 
     Parameters
     ----------
-    mcmc_dir: str
-      a base directory holding the MCMC samples
-    params: list
-      a list of parameter names
-    title: str
-      a title for the figure
+    mcmc_samples: dict
+      a dict holding a name as key for the sample and a corresponding directory as value.
+    params: dict or list
+      a dict holding the parameter names for the different mcmc_samples or
+      a unique list of parameter names
     ncol: int
       the number of columns within the plot
+    highlight_burnin: float
+      the fraction of samples to highlight (below the burnin value, the color is faded)
     ignore_rows: float
       the fraction of samples to ignore
+    show_mean_std: bool
+      show the mean/std values over the different samples
     no_cache: bool
       remove the getdist cache
     """
     from getdist import loadMCSamples
     from matplotlib.lines import Line2D
 
-    ncol = ncol if ncol is not None else len(params)
-    nrow = len(params) // ncol + 1 if ncol is not None else 1
-    fig = plt.figure(figsize=(15, 2 * nrow))
-    ax = [plt.subplot(nrow, ncol, i + 1) for i in range(len(params))]
+    if not isinstance(params, (list, dict)):
+        raise ValueError("Parameter list must be either a list or a dict!")
+    default_params = params
+    stored_axes = {}
 
-    # Loop over files independently
-    files = _get_chain_filenames(mcmc_dir)
-    for f in files:
-        sample = loadMCSamples(f[:-4], no_cache=no_cache, settings={"ignore_rows": ignore_rows})
-        color = f"C{f.split('.')[-2]}"
+    for name, path in mcmc_samples.items():
+        params = default_params if isinstance(default_params, list) else default_params[name]
+        axes = None
 
-        # Get param lookup table
-        lookup = {
-            par.name: dict(pos=i, label=par.label)
-            for i, par in enumerate(sample.getParamNames().names)
-        }
-        for i, p in enumerate(params):
-            ax[i].set_ylabel(r"${}$".format(lookup[p].get("label")))
-            y = sample.samples[:, lookup[p].get("pos")]
-            x = np.arange(len(y))
-            idx_burnin = -int(highlight_burnin * len(y))
-            ax[i].plot(x[idx_burnin:], y[idx_burnin:], alpha=0.75, color=color)
-            if highlight_burnin > 0.0:
-                ax[i].plot(x[:idx_burnin], y[:idx_burnin], alpha=0.25, color=color)
+        # Loop over files independently
+        files = _get_chain_filenames(path)
 
-    leg = fig.legend(
-        [Line2D([0], [0], color=f"C{f.split('.')[-2]}") for f in files],
-        [f"mcmc #{f.split('.')[-2]}" for f in files],
-        bbox_to_anchor=(1.0, 0.6),
-        labelcolor="linecolor",
-        loc="upper left",
-        title=title,
-    )
-    leg._legend_box.align = "left"
-    plt.tight_layout()
+        chains = {}
+        min_chain_size = np.inf
+        for f in files:
+            sample = loadMCSamples(f[:-4], no_cache=no_cache, settings={"ignore_rows": ignore_rows})
+
+            # Get param lookup table
+            lookup = {
+                par.name: dict(pos=i, label=par.label)
+                for i, par in enumerate(sample.getParamNames().names)
+            }
+
+            if axes is None:
+                # Keep only relevant parameters
+                params = [par for par in params if par in lookup]
+                ncol = ncol if ncol is not None else len(params)
+                nrow = len(params) // ncol + 1 if ncol is not None else 1
+                fig = plt.figure(figsize=(15, 2 * nrow))
+                axes = [plt.subplot(nrow, ncol, i + 1) for i in range(len(params))]
+
+            color = f"C{f.split('.')[-2]}"
+            if sample.samples.shape[0] < min_chain_size:
+                min_chain_size = sample.samples.shape[0]
+            for i, p in enumerate(params):
+                axes[i].set_ylabel(r"${}$".format(lookup[p].get("label")))
+                y = sample.samples[:, lookup[p].get("pos")]
+                x = np.arange(len(y))
+                idx_burnin = -int(highlight_burnin * len(y))
+                axes[i].plot(x[idx_burnin:], y[idx_burnin:], alpha=0.75, color=color)
+                if highlight_burnin > 0.0:
+                    axes[i].plot(x[:idx_burnin], y[:idx_burnin], alpha=0.25, color=color)
+                chains.setdefault(p, []).append(y)
+
+        if show_mean_std:
+            for i, p in enumerate(params):
+                data = np.array([chain[:min_chain_size] for chain in chains[p]])
+                mu, std = np.mean(data), np.std(data)
+                axes[i].axhline(mu, color="0.6", lw=1)
+                for sign in [-1, +1]:
+                    axes[i].axhline(mu + std * sign, color="0.6", ls="--", lw=1)
+
+        leg = fig.legend(
+            [Line2D([0], [0], color=f"C{f.split('.')[-2]}") for f in files],
+            [f"mcmc #{f.split('.')[-2]}" for f in files],
+            bbox_to_anchor=(1.0, 0.6),
+            labelcolor="linecolor",
+            loc="upper left",
+            title=name,
+        )
+        leg._legend_box.align = "left"
+        fig.tight_layout()
+        stored_axes[name] = {p: axes[i] for i, p in enumerate(params)}
+
+    return stored_axes
 
 
 def plot_progress(mcmc_samples):
