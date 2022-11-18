@@ -161,6 +161,9 @@ def plot_chains(
         if isinstance(show_only_mcmc, int):
             show_only_mcmc = [show_only_mcmc]
 
+    if ignore_rows > 0.0:
+        highlight_burnin = 0.0
+
     default_params = params
     stored_axes = {}
 
