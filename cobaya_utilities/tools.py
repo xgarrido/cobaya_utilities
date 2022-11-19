@@ -126,6 +126,8 @@ def plot_chains(
     show_mean_std=True,
     show_only_mcmc=None,
     no_cache=False,
+    markers={},
+    markers_args={},
 ):
     """Plot MCMC sample evolution
 
@@ -164,6 +166,7 @@ def plot_chains(
     if ignore_rows > 0.0:
         highlight_burnin = 0.0
 
+    markers_args = markers_args or dict(color="0.15", ls="--", lw=1)
     default_params = params
     stored_axes = {}
 
@@ -206,7 +209,9 @@ def plot_chains(
                 idx_burnin = -int(highlight_burnin * len(y))
                 axes[i].plot(x[idx_burnin:], y[idx_burnin:], alpha=0.75, color=color)
                 if highlight_burnin > 0.0:
-                    axes[i].plot(x[:idx_burnin], y[:idx_burnin], alpha=0.25, color=color)
+                    axes[i].plot(x[: idx_burnin + 1], y[: idx_burnin + 1], alpha=0.25, color=color)
+                if p in markers:
+                    axes[i].axhline(markers[p], **markers_args)
                 chains.setdefault(p, []).append(y)
 
         if show_mean_std:
