@@ -53,12 +53,15 @@ def compute_fisher_matrix(
     """
 
     from cobaya.install import install
+    from cobaya.log import get_logger
     from cobaya.model import get_model
 
-    params = params or {}
+    logger = get_logger("fisher")
+
     likelihood_info = {"likelihood": {likelihood_name: likelihood_config}}
     install(likelihood_info, path=_packages_path)
 
+    params = params or {}
     info = {
         **likelihood_info,
         **{
@@ -99,15 +102,15 @@ def compute_fisher_matrix(
             delta /= defaults[param]
 
         if np.all(delta == 0):
-            print(
-                f"WARNING: Sampling a parameter '{param}' that do not have "
+            logger.warning(
+                f"Sampling a parameter '{param}' that do not have "
                 "any effect on power spectra! You should remove it from "
                 "cobaya parameter dictionary."
             )
             continue
         deriv[param] = delta
         if verbose:
-            print(f"NOTICE: Computing parameter '{param}' done")
+            logger.info(f"Computing parameter '{param}' done")
 
     fisher_params = list(deriv.keys())
     nparams = len(fisher_params)
@@ -135,6 +138,8 @@ def compute_fisher_matrix(
         columns=["value", r"$\sigma$", "S/N", "param"],
     )
     cov = pd.DataFrame(data=fisher_cov, index=labels, columns=labels)
+    if verbose:
+        logger.info(f"Computing fisher matrix done")
     return summary, cov
 
 
