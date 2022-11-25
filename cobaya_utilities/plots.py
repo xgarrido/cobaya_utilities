@@ -102,7 +102,18 @@ def show_tau_prior(ax, loc=0.054, scale=0.0073):
     )
 
 
-def despine(g, **kwargs):
-    """Special function to remove left spine in getdist triangle plots"""
+def despine(g, all_axes=False, **kwargs):
+    """Special function to remove left spine in getdist plots
+
+    Parameters
+    ----------
+    g: getdist.plots
+      the getdist plotter instance
+    all_axes: bool
+      either to remove the spines for all the axes or not
+    """
     kwargs = {"left": True} or kwargs
-    sns.despine(ax=g.subplots[0, 0], **kwargs)
+    if all_axes:
+        sns.despine(fig=g.fig, **kwargs)
+    else:
+        sns.despine(ax=g.subplots[0, 0], **kwargs)
