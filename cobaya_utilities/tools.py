@@ -90,6 +90,8 @@ def print_results(samples, params, labels, limit=1):
     limit: int
       the confidence limit of the results (default: 1 i.e. 68%).
     """
+    params = params if isinstance(params, list) else list(params.keys())
+    labels = labels if isinstance(labels, list) else list(labels.keys())
     d = {}
     r = re.compile(r"(.*)(=|<|>)(.*)")
     for param in params:
@@ -167,11 +169,8 @@ def plot_chains(
         highlight_burnin = 0.0
 
     markers_args = markers_args or dict(color="0.15", ls="--", lw=1)
-    default_params = params
     stored_axes = {}
-
     for name, path in mcmc_samples.items():
-        params = default_params if isinstance(default_params, list) else default_params[name]
         axes = None
 
         # Loop over files independently
@@ -193,16 +192,16 @@ def plot_chains(
 
             if axes is None:
                 # Keep only relevant parameters
-                params = [par for par in params if par in lookup]
-                ncol = ncol if ncol is not None else len(params)
-                nrow = len(params) // ncol + 1 if ncol is not None else 1
+                selected_params = [par for par in params if par in lookup]
+                ncol = ncol if ncol is not None else len(selected_params)
+                nrow = len(selected_params) // ncol + 1 if ncol is not None else 1
                 fig = plt.figure(figsize=(15, 2 * nrow))
-                axes = [plt.subplot(nrow, ncol, i + 1) for i in range(len(params))]
+                axes = [plt.subplot(nrow, ncol, i + 1) for i in range(len(selected_params))]
 
             color = f"C{imcmc}"
             if sample.samples.shape[0] < min_chain_size:
                 min_chain_size = sample.samples.shape[0]
-            for i, p in enumerate(params):
+            for i, p in enumerate(selected_params):
                 axes[i].set_ylabel(r"${}$".format(lookup[p].get("label")))
                 y = sample.samples[:, lookup[p].get("pos")]
                 x = np.arange(len(y))
@@ -215,7 +214,7 @@ def plot_chains(
                 chains.setdefault(p, []).append(y)
 
         if show_mean_std:
-            for i, p in enumerate(params):
+            for i, p in enumerate(selected_params):
                 data = np.array([chain[:min_chain_size] for chain in chains[p]])
                 mu, std = np.mean(data), np.std(data)
                 axes[i].axhline(mu, color="0.6", lw=1)
@@ -232,7 +231,7 @@ def plot_chains(
         )
         leg._legend_box.align = "left"
         fig.tight_layout()
-        stored_axes[name] = {p: axes[i] for i, p in enumerate(params)}
+        stored_axes[name] = {p: axes[i] for i, p in enumerate(selected_params)}
 
     return stored_axes
 
