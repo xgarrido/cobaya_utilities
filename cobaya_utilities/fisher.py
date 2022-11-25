@@ -10,6 +10,10 @@ _packages_path = os.environ.get("COBAYA_PACKAGES_PATH") or os.path.join(
     tempfile.gettempdir(), "cobaya_utilities"
 )
 
+from getdist.types import NumberFormatter
+
+_formatter = NumberFormatter()
+
 
 def _get_sampled_params(params):
     sampled_params = deepcopy(params)
@@ -108,6 +112,7 @@ def compute_fisher_matrix(
                 "cobaya parameter dictionary."
             )
             continue
+
         deriv[param] = delta
         if verbose:
             logger.info(f"Computing parameter '{param}' done")
@@ -132,8 +137,12 @@ def compute_fisher_matrix(
     ]
     values = np.array(list(params.values()))
     signal_over_noise = values / sigmas
+
+    format_array = lambda array: [_formatter.formatNumber(n) for n in array]
     summary = pd.DataFrame(
-        data=np.array([values, sigmas, signal_over_noise, list(params.keys())]).T,
+        data=np.array(
+            [values, format_array(sigmas), format_array(signal_over_noise), list(params.keys())]
+        ).T,
         index=labels,
         columns=["value", r"$\sigma$", "S/N", "param"],
     )
@@ -238,10 +247,7 @@ def generate_yaml_config(
     if summary is None:
         summary, matrix = compute_fisher_matrix(**matrix_args)
 
-    from getdist.types import NumberFormatter
-
-    formatter = NumberFormatter()
-    fn = lambda n: float(formatter.formatNumber(n))
+    fn = lambda n: float(_formatter.formatNumber(n))
 
     yaml_dict = {}
     for latex, fields in summary.to_dict(orient="index").items():
