@@ -2,12 +2,9 @@ import glob
 import os
 import re
 
-import getdist
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-getdist.chains.print_load_details = False
 
 
 def _get_chain_filenames(path, prefix="mcmc.", suffix=".txt"):
