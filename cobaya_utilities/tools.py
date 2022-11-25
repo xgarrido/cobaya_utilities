@@ -233,17 +233,19 @@ def plot_chains(
     return stored_axes
 
 
-def plot_progress(mcmc_samples):
+def plot_progress(mcmc_samples, sharex=True):
     """Plot Gelman R-1 parameter and acceptance rate
 
     Parameters
     ----------
     mcmc_samples: dict
       a dict holding a name as key for the sample and a corresponding directory as value.
+    sharex: bool
+      share the x-axis between the several plot progress (default: True)
     """
     nrows = len(mcmc_samples)
     ncols = 2
-    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 3 * nrows), sharex=True)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(15, 3 * nrows), sharex=sharex)
     axes = np.atleast_2d(axes)
 
     for i, (k, v) in enumerate(mcmc_samples.items()):
