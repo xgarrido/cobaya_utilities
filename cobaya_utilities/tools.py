@@ -1,10 +1,12 @@
 import glob
 import os
 import re
+from itertools import product
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 
 
 def _get_chain_filenames(path, prefix="mcmc.", suffix=".txt"):
@@ -17,7 +19,35 @@ def _get_chain_filenames(path, prefix="mcmc.", suffix=".txt"):
     )
 
 
-def print_chains_size(mcmc_samples, with_bar=False, bar_color="#b9b9b9"):
+def plot_chains_progress(mcmc_samples):
+    r = re.compile("\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
+    data = []
+    for name, path in mcmc_samples.items():
+        files = _get_chain_filenames(path, suffix=".log")
+        for fn in files:
+            with open(fn) as f:
+                for line in f:
+                    found = r.findall(line)
+                    if len(found) == 0:
+                        continue
+                    time, total_steps, accepted_steps = found[0]
+                    data.append([name, fn.split(".")[-2], time, "total", total_steps])
+                    data.append([name, fn.split(".")[-2], time, "accepted", accepted_steps])
+
+    return pd.DataFrame(
+        data=data,
+        columns=["simulation id", "mcmc id", "time", "status", "steps"],
+    )
+
+
+def print_chains_size(
+    mcmc_samples,
+    with_bar=False,
+    bar_color="#b9b9b9",
+    with_color_gradient=True,
+    color_palette="vlag",
+    hide_status=True,
+):
     """Print MCMC sample size given a set of directories
 
     Parameters
@@ -29,48 +59,72 @@ def print_chains_size(mcmc_samples, with_bar=False, bar_color="#b9b9b9"):
     bar_color: str
       bar color as hex string
     """
+    r = re.compile("\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
 
-    index = set()
-    nchains, status = {}, {}
-    for name, path in mcmc_samples.items():
-        files = _get_chain_filenames(path)
-        assert len(files) > 0, f"Missing mcmc chains in '{path}' directory!"
-        nchains[name], status[name] = len(files) * [0], (len(files) + 1) * [""]
-        total = 0
-        for f in files:
-            i = int(f.split(".")[-2]) - 1
-            index.add(f"mcmc {i + 1}")
-            nchains[name][i] = sum(1 for line in open(f))
-            total += nchains[name][i]
-            # Check status
-            for line in open(f.replace(".txt", ".log")):
-                if "[mcmc] The run has converged!" in line:
-                    status[name][i] = "done"
-                if "[mcmc] *ERROR*" in line:
-                    status[name][i] = "error"
-        nchains[name] += [total]
-        if sum(np.array(status[name]) == "done") == len(files):
-            status[name][-1] = "done"
-        for i, n in enumerate(nchains[name]):
-            if n / total < 0.10 and status[name][i] == "":
-                status[name][i] = "warning"
+    data = {}
+    for irow, (name, path) in enumerate(mcmc_samples.items()):
+        files = _get_chain_filenames(path, suffix=".log")
+        for fn in sorted(files):
+            mcmc_name = f"mcmc {fn.split('.')[-2]}"
+            status = dict(done="[mcmc] The run has converged!", error="[mcmc] *ERROR*")
+            data.setdefault(name, {}).update({(mcmc_name, "status"): "running"})
+            with open(fn) as f:
+                for line in f:
+                    for state, msg in status.items():
+                        if msg in line:
+                            data[name].update({(mcmc_name, "status"): state})
 
-    df = pd.DataFrame(nchains, index=sorted(index.union({"total"}))).T
-    status = pd.DataFrame(status, index=sorted(index.union({"total"}))).T
+                    found = r.findall(line)
+                    if len(found) == 0:
+                        continue
+                    time, total_steps, accepted_steps = found[0]
+            total_steps, accepted_steps = int(total_steps), int(accepted_steps)
+            rate = accepted_steps / total_steps
+            for field, content in zip(
+                ["accept.", "total", "rate"], [accepted_steps, total_steps, rate]
+            ):
+                data[name].update({(mcmc_name, field): content})
 
-    def _style_table(x):
-        css_tmpl = "background-color: {}"
-        df1 = pd.DataFrame("", index=x.index, columns=x.columns)
-        colors = dict(warning="bisque", done="lightgreen", error="lightcoral")
-        for state, color in colors.items():
-            mask = status == state
-            df1[mask] = css_tmpl.format(color)
-        return df1
+    df = pd.DataFrame.from_dict(data, orient="index")
+    mcmc_names = df.columns.get_level_values(0).unique()
 
     s = df.style
+    if hide_status:
+        s.hide([(name, "status") for name in mcmc_names], axis="columns")
     if with_bar:
-        s = s.bar(color=bar_color)
-    return s.apply(_style_table, axis=None)
+        s.bar(
+            subset=[(name, "accept.") for name in mcmc_names],
+            color=bar_color,
+            height=50,
+            width=60,
+        )
+    if with_color_gradient:
+        cm = sns.color_palette(color_palette, as_cmap=True)
+        s.background_gradient(
+            subset=[(name, "rate") for name in mcmc_names],
+            cmap=cm,
+            axis=None,
+            # vmin=0.0,
+            # vmax=0.3,
+            # low=0,
+            # high=0.3,
+        )
+
+    def _style_table(x):
+        df = pd.DataFrame("", index=x.index, columns=x.columns)
+        states = dict(running="#55A868", done="#55A868", error="#C44E52")
+        for name, (state, color) in product(mcmc_names, states.items()):
+            mask = x.loc[:, (name, "status")] == state
+            css = f"""color: {color}; text-decoration: {color} underline;
+            text-decoration-thickness: 5px; font-weight: {'normal' if state=="running" else 'bold'}"""
+            for col in ["total"]:
+                df.loc[:, (name, col)][mask] = css
+        return df
+
+    s.format({sub: "{:.1%}".format for sub in [(name, "rate") for name in mcmc_names]}).apply(
+        _style_table, axis=None
+    )
+    return s
 
 
 def print_results(samples, params, labels, limit=1):
