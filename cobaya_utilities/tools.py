@@ -31,8 +31,14 @@ def plot_chains_progress(mcmc_samples):
                     if len(found) == 0:
                         continue
                     time, total_steps, accepted_steps = found[0]
-                    data.append([name, fn.split(".")[-2], time, "total", total_steps])
-                    data.append([name, fn.split(".")[-2], time, "accepted", accepted_steps])
+                    total_steps, accepted_steps = int(total_steps), int(accepted_steps)
+                    time = pd.to_datetime(time)
+                    imcmc = fn.split(".")[-2]
+                    for field, content in zip(
+                        ["total", "accepted", "rate"],
+                        [total_steps, accepted_steps, accepted_steps / total_steps],
+                    ):
+                        data.append([name, imcmc, time, field, content])
 
     return pd.DataFrame(
         data=data,
@@ -45,7 +51,7 @@ def print_chains_size(
     with_bar=False,
     bar_color="#b9b9b9",
     with_color_gradient=True,
-    color_palette="vlag",
+    color_palette="Greens",
     hide_status=True,
 ):
     """Print MCMC sample size given a set of directories
@@ -86,42 +92,54 @@ def print_chains_size(
                 data[name].update({(mcmc_name, field): content})
 
     df = pd.DataFrame.from_dict(data, orient="index")
-    mcmc_names = df.columns.get_level_values(0).unique()
+    mcmc_names = list(df.columns.get_level_values(0).unique())
+
+    # Append total count
+    all_name = "all mcmc"
+    dfs = [
+        pd.DataFrame(
+            {(all_name, field): df.loc[:, df.columns.get_level_values(1) == field].sum(axis=1)}
+        )
+        for field in ["accept.", "total"]
+    ]
+    df = pd.concat([df] + dfs, axis=1)
+    df[(all_name, "rate")] = df[(all_name, "accept.")] / df[(all_name, "total")]
+    all_mcmc_names = mcmc_names + [all_name]
 
     s = df.style
     if hide_status:
         s.hide([(name, "status") for name in mcmc_names], axis="columns")
     if with_bar:
         s.bar(
-            subset=[(name, "accept.") for name in mcmc_names],
+            subset=[(name, "accept.") for name in all_mcmc_names],
             color=bar_color,
             height=50,
             width=60,
         )
     if with_color_gradient:
         cm = sns.color_palette(color_palette, as_cmap=True)
+        s.background_gradient(subset=[(name, "rate") for name in mcmc_names], cmap=cm, axis=None)
         s.background_gradient(
-            subset=[(name, "rate") for name in mcmc_names],
-            cmap=cm,
-            axis=None,
-            # vmin=0.0,
-            # vmax=0.3,
-            # low=0,
-            # high=0.3,
+            subset=[(all_name, "total")], cmap=sns.color_palette("Blues", as_cmap=True)
+        )
+        s.background_gradient(
+            subset=[(all_name, "rate")], cmap=sns.color_palette("Reds", as_cmap=True)
         )
 
     def _style_table(x):
         df = pd.DataFrame("", index=x.index, columns=x.columns)
-        states = dict(running="#55A868", done="#55A868", error="#C44E52")
+        states = dict(running="#55A868", done="#4C72B0", error="#C44E52")
         for name, (state, color) in product(mcmc_names, states.items()):
             mask = x.loc[:, (name, "status")] == state
             css = f"""color: {color}; text-decoration: {color} underline;
             text-decoration-thickness: 5px; font-weight: {'normal' if state=="running" else 'bold'}"""
-            for col in ["total"]:
-                df.loc[:, (name, col)][mask] = css
+            df.loc[:, (name, "total")][mask] = css
+            if state == "error":
+                df.loc[:, (name, "rate")][mask] = css
+
         return df
 
-    s.format({sub: "{:.1%}".format for sub in [(name, "rate") for name in mcmc_names]}).apply(
+    s.format({sub: "{:.1%}".format for sub in [(name, "rate") for name in all_mcmc_names]}).apply(
         _style_table, axis=None
     )
     return s
