@@ -209,7 +209,7 @@ def plot_fisher_matrix(matrix=None, use_relplot=True, **matrix_args):
 
 def generate_yaml_config(
     summary=None,
-    sigma_level=5,
+    sigma_scale=10,
     proposal_scale=0.1,
     with_ref=False,
     ref_scale=1,
@@ -225,7 +225,7 @@ def generate_yaml_config(
     summary: pandas.Dataframe
       the summary product from `compute_fisher_matrix`. In case no summary is provided then
       the function will call the `compute_fisher_matrix` function
-    sigma_level: float
+    sigma_scale: float
       the number of sigma for min/max values of the prior
     proposal_scale: float
       the proposal is equal to `proposal_scale * sigma`
@@ -257,8 +257,8 @@ def generate_yaml_config(
         value = float(fields.get("value"))
         sigma = float(fields.get("$\sigma$"))
         latex = latex.replace("$", "")
-        prior_min = value - sigma_level * sigma
-        prior_max = value + sigma_level * sigma
+        prior_min = value - sigma_scale * sigma
+        prior_max = value + sigma_scale * sigma
         yaml_dict.update({name: {"prior": {"min": fn(prior_min), "max": fn(prior_max)}}})
         if with_ref:
             yaml_dict[name].update(
