@@ -53,6 +53,7 @@ def print_chains_size(
     with_color_gradient=True,
     color_palette="Greens",
     hide_status=True,
+    with_gelman_rubin=True,
 ):
     """Print MCMC sample size given a set of directories
 
@@ -64,6 +65,12 @@ def print_chains_size(
       showing an histogram bar for each cell given the number of mcmc samples
     bar_color: str
       bar color as hex string
+    color_palette: str
+      color palette to be used for background gradient
+    hide_status: bool
+      either to hide chain status (running, error, done)
+    with_gelman_rubin: bool
+      add Gelman-Rubin metric aka R-1
     """
     r = re.compile("\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
 
@@ -87,11 +94,23 @@ def print_chains_size(
             total_steps, accepted_steps = int(total_steps), int(accepted_steps)
             rate = accepted_steps / total_steps
             for field, content in zip(
-                ["accept.", "total", "rate"], [accepted_steps, total_steps, rate]
+                ["accept.", "total", "rate", "R-1"], [accepted_steps, total_steps, rate, None]
             ):
                 data[name].update({(mcmc_name, field): content})
+        if with_gelman_rubin:
+            files = _get_chain_filenames(path, suffix=".progress")
+            for fn in sorted(files):
+                mcmc_name = f"mcmc {fn.split('.')[-2]}"
+                with open(fn) as f:
+                    for line in f:
+                        pass
+                    if line.startswith("#"):
+                        continue
+                    data[name].update({(mcmc_name, "R-1"): f"{float(line.split()[-2]):.2f}"})
 
     df = pd.DataFrame.from_dict(data, orient="index")
+    df.dropna(axis=1, how="all", inplace=True)
+
     mcmc_names = list(df.columns.get_level_values(0).unique())
 
     # Append total count
@@ -119,6 +138,10 @@ def print_chains_size(
     if with_color_gradient:
         cm = sns.color_palette(color_palette, as_cmap=True)
         s.background_gradient(subset=[(name, "rate") for name in mcmc_names], cmap=cm, axis=None)
+        if with_gelman_rubin:
+            cm = sns.color_palette(color_palette + "_r", as_cmap=True)
+            s.text_gradient(subset=[(name, "R-1") for name in mcmc_names], cmap=cm, axis=None)
+            # s.highlight_null(color="white")
         s.background_gradient(
             subset=[(all_name, "total")], cmap=sns.color_palette("Blues", as_cmap=True)
         )
@@ -139,9 +162,9 @@ def print_chains_size(
 
         return df
 
-    s.format({sub: "{:.1%}".format for sub in [(name, "rate") for name in all_mcmc_names]}).apply(
-        _style_table, axis=None
-    )
+    s.format(
+        {sub: "{:.1%}".format for sub in [(name, "rate") for name in all_mcmc_names]}, na_rep=""
+    ).apply(_style_table, axis=None)
     return s
 
 
