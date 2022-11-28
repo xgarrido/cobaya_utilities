@@ -6,13 +6,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-_packages_path = os.environ.get("COBAYA_PACKAGES_PATH") or os.path.join(
+_default_packages_path = os.environ.get("COBAYA_PACKAGES_PATH") or os.path.join(
     tempfile.gettempdir(), "cobaya_utilities"
 )
 
 from getdist.types import NumberFormatter
 
 _formatter = NumberFormatter()
+_cached_fisher_matrix = None
 
 
 def _get_sampled_params(params):
@@ -34,9 +35,10 @@ def compute_fisher_matrix(
     likelihood_name,
     likelihood_config=None,
     params=None,
-    return_correlation=True,
+    return_correlation=False,
     epsilon=0.01,
     verbose=True,
+    packages_path=None,
 ):
     """Compute and return the Fisher matrix
 
@@ -54,16 +56,20 @@ def compute_fisher_matrix(
       the relative value to change the parameter when computing derivatives
     verbose: bool
       verbosity flag
+    packages_path: str
+      path to cobaya packages path
     """
+    global _cached_fisher_matrix
 
     from cobaya.install import install
     from cobaya.log import get_logger
     from cobaya.model import get_model
 
     logger = get_logger("fisher")
+    packages_path = packages_path or _default_packages_path
 
     likelihood_info = {"likelihood": {likelihood_name: likelihood_config}}
-    install(likelihood_info, path=_packages_path)
+    install(likelihood_info, path=packages_path)
 
     params = params or {}
     info = {
@@ -74,7 +80,7 @@ def compute_fisher_matrix(
         },
     }
 
-    model = get_model(info, packages_path=_packages_path)
+    model = get_model(info, packages_path=packages_path)
     likelihood = model.likelihood[likelihood_name]
     theory = model.theory["camb"]
 
@@ -123,11 +129,7 @@ def compute_fisher_matrix(
     for i1, p1 in enumerate(fisher_params):
         for i2, p2 in enumerate(fisher_params):
             fisher_matrix[i1, i2] = deriv[p1] @ likelihood.inv_cov @ deriv[p2]
-    fisher_cov = np.linalg.inv(fisher_matrix)
-
-    sigmas = np.sqrt(np.diag(fisher_cov))
-    if return_correlation:
-        fisher_cov /= np.outer(sigmas, sigmas)
+    _cached_fisher_matrix = np.linalg.inv(fisher_matrix)
 
     from cobaya_utilities.utilities import _cosmo_labels
 
@@ -136,6 +138,7 @@ def compute_fisher_matrix(
         for name in fisher_params
     ]
     values = np.array(list(params.values()))
+    sigmas = np.sqrt(np.diag(_cached_fisher_matrix))
     signal_over_noise = values / sigmas
 
     format_array = lambda array: [_formatter.formatNumber(n) for n in array]
@@ -146,13 +149,16 @@ def compute_fisher_matrix(
         index=labels,
         columns=["value", r"$\sigma$", "S/N", "param"],
     )
-    cov = pd.DataFrame(data=fisher_cov, index=labels, columns=labels)
+    _cached_fisher_matrix = pd.DataFrame(data=_cached_fisher_matrix, index=labels, columns=labels)
     if verbose:
         logger.info(f"Computing fisher matrix done")
-    return summary, cov
+
+    if return_correlation:
+        return summary, _cached_fisher_matrix.div(np.outer(sigmas, sigmas))
+    return summary
 
 
-def plot_fisher_matrix(matrix=None, use_relplot=True, **matrix_args):
+def plot_fisher_matrix(matrix=None, use_relplot=True, reset_cache=False, **matrix_args):
     """Compute and return the Fisher matrix
 
     Parameters
@@ -164,10 +170,20 @@ def plot_fisher_matrix(matrix=None, use_relplot=True, **matrix_args):
       use a scatter plot representation rather than a matrix view
     matrix_args: dict
       the paramaters to pass to the `compute_fisher_matrix` function
+    reset_cache: bool
+      recompute previous Fisher estimation
     """
+    global _cached_fisher_matrix
+    if reset_cache:
+        _cached_fisher_matrix = None
+
+    if _cached_fisher_matrix is not None:
+        sigmas = np.sqrt(np.diag(_cached_fisher_matrix))
+        matrix = _cached_fisher_matrix / np.outer(sigmas, sigmas)
 
     if matrix is None:
-        matrix = compute_fisher_matrix(**matrix_args)
+        matrix_args = matrix_arags.update({"return_correlation": True})
+        summary, matrix = compute_fisher_matrix(**matrix_args)
 
     cmap = sns.diverging_palette(230, 20, as_cmap=True)
     if use_relplot:
@@ -245,7 +261,7 @@ def generate_yaml_config(
     """
 
     if summary is None:
-        summary, matrix = compute_fisher_matrix(**matrix_args)
+        summary = compute_fisher_matrix(**matrix_args)
 
     fn = lambda n: float(_formatter.formatNumber(n))
 
