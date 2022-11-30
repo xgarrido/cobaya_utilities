@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from scipy import stats
 
@@ -145,11 +146,11 @@ def plot_mean_values(samples, params, colors=None, palette=None, labels=None, fi
     fig, axes = plt.subplots(nrows=1, ncols=nparams, sharey=True, figsize=figsize)
     fig.subplots_adjust(hspace=0, wspace=0.15)
 
-    use_chi2_color = False
+    use_stats_color = None
     if colors is not None:
         if isinstance(colors, str):
-            use_chi2_color = colors == "chi2"
-            colors = nsamples * [None if use_chi2_color else colors]
+            use_stats_color = colors
+            colors = nsamples * [None if use_stats_color in ["chi2", "p-value"] else colors]
     else:
         colors = sns.color_palette(palette, n_colors=nsamples)
     cmap = sns.color_palette(palette or "flare", as_cmap=True)
@@ -165,8 +166,10 @@ def plot_mean_values(samples, params, colors=None, palette=None, labels=None, fi
             means[j, i], sigmas[j, i] = x, xerr
             if params.get(name) is not None:
                 chi2s[j, i] = ((x - params[name]) / xerr) ** 2
-                if use_chi2_color:
+                if use_stats_color == "chi2":
                     colors[i] = cmap(chi2s[j, i])
+                if use_stats_color == "p-value":
+                    colors[i] = cmap(stats.chi2.sf(chi2s[j, i], 1))
             if axes[j].get_xlabel() == "":
                 axes[j].set(xlabel=r"${}$".format(latex[j]), yticks=[])
             *_, bars = axes[j].errorbar(x, i, xerr=xerr, fmt="o", color=colors[i])
@@ -199,21 +202,23 @@ def plot_mean_values(samples, params, colors=None, palette=None, labels=None, fi
                 va="center",
                 ha="right",
                 fontsize=8,
-                color=unique_color if use_chi2_color else colors[i],
+                color=unique_color if use_stats_color in ["chi2", "p-value"] else colors[i],
             )
     # Add X² colorbar
-    if use_chi2_color:
+    if use_stats_color in ["chi2", "p-value"]:
         from matplotlib import cm, colors
 
+        vmin = chi2s.min() if use_stats_color == "chi2" else 0.0
+        vmax = chi2s.max() if use_stats_color == "chi2" else 1.0
         fig.colorbar(
-            cm.ScalarMappable(norm=colors.Normalize(vmin=chi2s.min(), vmax=chi2s.max()), cmap=cmap),
+            cm.ScalarMappable(norm=colors.Normalize(vmin=vmin, vmax=vmax), cmap=cmap),
             ax=axes,
-            label=r"$\chi^2$",
+            label=r"$\chi^2$" if use_stats_color == "chi2" else r"$p$-value",
             shrink=0.8,
         )
 
 
-def plot_mean_distributions(samples, params, nx=None):
+def plot_mean_distributions(samples, params, colors="0.7", return_results=False, nx=None):
     """Plot mean KDE distributions
 
     Parameters
@@ -226,21 +231,20 @@ def plot_mean_distributions(samples, params, nx=None):
     colors: list or str
       the colors of the different markers. If colors == "chi2" then the markers will be colored
       relatively to their chi2 values (if default values are given for parameters)
-    palette: str
-      the color palette to be used in case no colors are provided
-    labels: list
-      a list of labels describing each sample
-    figsize: tuple
-      the figure size
+    return_results: bool
+      return a pandas Dataframe holding the results
     """
-    from getdist import plots
+    from getdist.plots import get_subplot_plotter
 
     nsamples = len(samples)
-    g = plots.get_subplot_plotter(subplot_size=3, subplot_size_ratio=1.4)
-    g.settings.line_styles = nsamples * ["-0.7"]
+    g = get_subplot_plotter(subplot_size=3, subplot_size_ratio=1.4)
+    g.settings.line_styles = (
+        nsamples * ["-" + colors] if isinstance(colors, str) else ["-" + color for color in colors]
+    )
     nx = nx or nsamples
     g.plots_1d(samples, params, nx=nx, legend_labels=[], lws=2)
 
+    results = {}
     axes = g.subplots.flatten()
     for i, name in enumerate(params):
         ax = axes[i]
@@ -251,18 +255,27 @@ def plot_mean_distributions(samples, params, nx=None):
             marge = sample.getMargeStats()
             par = marge.parWithName(name)
             means[j], sigmas[j] = par.mean, par.err
-        x = np.linspace(*ax.get_xlim(), 1000)
         mu = np.average(means, weights=1 / sigmas**2)
         sigma = np.mean(sigmas)
+        x = np.linspace(*ax.get_xlim(), 1000)
         y = stats.norm.pdf(x, mu, sigma)
         ax.plot(x, y / y.max(), color="black", lw=2.5)
         if params.get(name) is not None:
-            ax.axvline(params[name], color="red", lw=3)
+            param = params.get(name)
+            if isinstance(param, (tuple, list)):
+                y = stats.norm.pdf(x, *param)
+                ax.plot(x, y / y.max(), color="black", ls="--", lw=2.5)
+            else:
+                ax.axvline(param, color="red", lw=3)
             legend = ax.legend([], loc="upper right")
             legend.set_title(
                 r"$\frac{{{:.1f}\,\sigma}}{{\sqrt{{N_{{\rm sim}}}}}}$".format(
-                    (mu - params[name]) / sigma * np.sqrt(nsamples)
+                    (mu - param) / sigma * np.sqrt(nsamples)
                 ),
                 prop={"size": 16},
             )
+        results[ax.get_xlabel()] = {"value rec.": mu, "$\sigma$ rec.": sigma}
         ax.spines.left.set_visible(False)
+
+    if return_results:
+        return pd.DataFrame.from_dict(results, orient="index")
