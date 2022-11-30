@@ -54,6 +54,7 @@ def print_chains_size(
     color_palette="Greens",
     hide_status=True,
     with_gelman_rubin=True,
+    prefix="mcmc.",
 ):
     """Print MCMC sample size given a set of directories
 
@@ -71,12 +72,16 @@ def print_chains_size(
       either to hide chain status (running, error, done)
     with_gelman_rubin: bool
       add Gelman-Rubin metric aka R-1
+    prefix: str
+      prefix for chain names (default is "mcmc.")
     """
     r = re.compile("\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
 
     data = {}
     for irow, (name, path) in enumerate(mcmc_samples.items()):
-        files = _get_chain_filenames(path, suffix=".log")
+        files = _get_chain_filenames(path, prefix=prefix, suffix=".log")
+        if not files:
+            raise ValueError(f"Missing log files for chains '{name}' within path '{path}'!")
         for fn in sorted(files):
             mcmc_name = f"mcmc {fn.split('.')[-2]}"
             status = dict(done="[mcmc] The run has converged!", error="[mcmc] *ERROR*")
@@ -285,8 +290,10 @@ def plot_chains(
             if axes is None:
                 # Keep only relevant parameters
                 selected_params = [par for par in params if par in lookup]
-                ncol = ncol if ncol is not None else len(selected_params)
-                nrow = len(selected_params) // ncol + 1 if ncol is not None else 1
+                if ncol is None:
+                    ncol, nrow = len(selected_params), 1
+                else:
+                    nrow = len(selected_params) // ncol + 1
                 fig = plt.figure(figsize=(15, 2 * nrow))
                 axes = [plt.subplot(nrow, ncol, i + 1) for i in range(len(selected_params))]
 
@@ -316,7 +323,7 @@ def plot_chains(
         leg = fig.legend(
             [Line2D([0], [0], color=f"C{f.split('.')[-2]}") for f in files],
             [f"mcmc #{f.split('.')[-2]}" for f in files],
-            bbox_to_anchor=(1.0, 0.6),
+            bbox_to_anchor=(1.0, 0.6 if nrow > 1 else 1.0),
             labelcolor="linecolor",
             loc="upper left",
             title=name,
