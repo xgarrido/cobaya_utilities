@@ -142,13 +142,13 @@ def compute_fisher_matrix(
     signal_over_noise = values / sigmas
 
     format_array = lambda array: [_formatter.formatNumber(n) for n in array]
+    # [format_array(values), format_array(sigmas), format_array(signal_over_noise)]
     summary = pd.DataFrame(
-        data=np.array(
-            [values, format_array(sigmas), format_array(signal_over_noise), list(params.keys())]
-        ).T,
+        data=np.array([values, sigmas, signal_over_noise]).T,
         index=labels,
-        columns=["value", r"$\sigma$", "S/N", "param"],
+        columns=["value", r"$\sigma$", "S/N"],
     )
+    summary["param"] = list(params.keys())
     _cached_fisher_matrix = pd.DataFrame(data=_cached_fisher_matrix, index=labels, columns=labels)
     if verbose:
         logger.info(f"Computing fisher matrix done")
