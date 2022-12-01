@@ -9,14 +9,33 @@ import pandas as pd
 import seaborn as sns
 
 
-def _get_chain_filenames(path, prefix="mcmc.", suffix=".txt"):
+def _get_chain_filenames(path, prefix="mcmc", suffix=".txt"):
     return sorted(
         [
             f
             for f in glob.glob(os.path.join(path, f"{prefix}*{suffix}"))
-            if re.match(f"{prefix}[0-9]+{suffix}", os.path.basename(f))
+            if re.match(f"{prefix}(\.|)([0-9]+|){re.escape(suffix)}", os.path.basename(f))
         ]
     )
+
+
+def create_symlink(mcmc_samples, prefix="mcmc"):
+    """Create missing files when running chains without mpi support (as it is done in CC in2p3)"""
+    regex = re.compile(f".*{prefix}.*\.([0-9]+.txt)")
+    for name, path in mcmc_samples.items():
+        if files := _get_chain_filenames(path, prefix=prefix):
+            continue
+        if not (files := _get_chain_filenames(path, prefix=prefix + ".*", suffix=".txt")):
+            raise ValueError("Missing chain files!")
+
+        print("Create MCMC symlinks...")
+        for f in files:
+            if m := regex.match(f):
+                dest = f.replace(m.group(1), "")
+                os.symlink(os.path.basename(f), dest + "txt")
+                updated_yaml = os.path.join(os.path.dirname(f), f"{prefix}.updated.yaml")
+                if not os.path.exists(updated_yaml):
+                    os.symlink(os.path.basename(dest) + "updated.yaml", updated_yaml)
 
 
 def plot_chains_progress(mcmc_samples):
@@ -75,13 +94,15 @@ def print_chains_size(
     prefix: str
       prefix for chain names (default is "mcmc.")
     """
+    create_symlink(mcmc_samples, prefix)
     r = re.compile("\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
 
     data = {}
     for irow, (name, path) in enumerate(mcmc_samples.items()):
         files = _get_chain_filenames(path, prefix=prefix, suffix=".log")
         if not files:
-            raise ValueError(f"Missing log files for chains '{name}' within path '{path}'!")
+            print(f"Missing log files for chains '{name}' within path '{path}'!")
+            return
         for fn in sorted(files):
             mcmc_name = f"mcmc {fn.split('.')[-2]}"
             status = dict(done="[mcmc] The run has converged!", error="[mcmc] *ERROR*")
@@ -225,8 +246,9 @@ def plot_chains(
     show_mean_std=True,
     show_only_mcmc=None,
     no_cache=False,
-    markers={},
-    markers_args={},
+    markers=None,
+    markers_args=None,
+    prefix="mcmc",
 ):
     """Plot MCMC sample evolution
 
@@ -249,7 +271,14 @@ def plot_chains(
       only show chains given their number
     no_cache: bool
       remove the getdist cache
+    markers: dict
+      dictionnary holding the "expected" value for a parameter
+    markers_args: dict
+      marker kwargs to pass to plt.axhline
+    prefix: str
+      prefix name of chains
     """
+    create_symlink(mcmc_samples, prefix)
     from getdist import loadMCSamples
     from matplotlib.lines import Line2D
 
@@ -265,21 +294,32 @@ def plot_chains(
     if ignore_rows > 0.0:
         highlight_burnin = 0.0
 
+    markers = markers or {}
     markers_args = markers_args or dict(color="0.15", ls="--", lw=1)
     stored_axes = {}
+    regex = re.compile(f".*{prefix}\.([0-9]+).txt")
     for name, path in mcmc_samples.items():
         axes = None
 
         # Loop over files independently
-        files = _get_chain_filenames(path)
+        files = _get_chain_filenames(path, prefix=prefix)
+        if not files:
+            raise ValueError("Missing chain files!")
 
         chains = {}
         min_chain_size = np.inf
+        sample = None
         for f in files:
-            imcmc = int(f.split(".")[-2])
-            if show_only_mcmc and imcmc not in show_only_mcmc:
+            imcmc = 0 if not (m := regex.match(f)) else int(m.group(1))
+            if show_only_mcmc and int(imcmc) not in show_only_mcmc:
                 continue
-            sample = loadMCSamples(f[:-4], no_cache=no_cache, settings={"ignore_rows": ignore_rows})
+            kwargs = dict(no_cache=no_cache, settings={"ignore_rows": ignore_rows})
+            try:
+                sample = loadMCSamples(f[:-4], **kwargs)
+                samples = sample.samples
+            except AttributeError:
+                sample = sample or loadMCSamples(os.path.join(os.path.dirname(f), prefix), **kwargs)
+                samples = sample.getSeparateChains()[imcmc - 1].samples
 
             # Get param lookup table
             lookup = {
@@ -298,11 +338,11 @@ def plot_chains(
                 axes = [plt.subplot(nrow, ncol, i + 1) for i in range(len(selected_params))]
 
             color = f"C{imcmc}"
-            if sample.samples.shape[0] < min_chain_size:
-                min_chain_size = sample.samples.shape[0]
+            if samples.shape[0] < min_chain_size:
+                min_chain_size = samples.shape[0]
             for i, p in enumerate(selected_params):
                 axes[i].set_ylabel(r"${}$".format(lookup[p].get("label")))
-                y = sample.samples[:, lookup[p].get("pos")]
+                y = samples[:, lookup[p].get("pos")]
                 x = np.arange(len(y))
                 idx_burnin = -int(highlight_burnin * len(y))
                 axes[i].plot(x[idx_burnin:], y[idx_burnin:], alpha=0.75, color=color)
@@ -350,6 +390,7 @@ def plot_progress(mcmc_samples, sharex=True):
     fig, axes = plt.subplots(nrows, ncols, figsize=(15, 3 * nrows), sharex=sharex)
     axes = np.atleast_2d(axes)
 
+    regex = re.compile(".*mcmc\.([0-9]+).progress")
     for i, (k, v) in enumerate(mcmc_samples.items()):
         files = _get_chain_filenames(v, suffix=".progress")
         for f in files:
@@ -357,15 +398,16 @@ def plot_progress(mcmc_samples, sharex=True):
             df = pd.read_csv(
                 f, names=cols, comment="#", sep=" ", skipinitialspace=True, index_col=False
             )
-            idx = f.split(".")[-2]
-            kwargs = dict(label=f"mcmc #{idx}", color=f"C{idx}", alpha=0.75)
+            idx = 0 if not (m := regex.match(f)) else m.group(1)
+            kwargs = dict(label=f"mcmc" + (f" #{idx}" if idx else ""), color=f"C{idx}", alpha=0.75)
             axes[i, 0].semilogy(df.N, df.Rminus1, "-o", **kwargs)
             axes[i, 0].set_ylabel(r"$R-1$")
 
             axes[i, 1].plot(df.N, df.acceptance_rate, "-o", **kwargs)
             axes[i, 1].set_ylabel(r"acceptance rate")
-        leg = axes[i, 1].legend(
-            title=k, bbox_to_anchor=(1, 1), loc="upper left", labelcolor="linecolor"
-        )
-        leg._legend_box.align = "left"
+        if len(files) > 1:
+            leg = axes[i, 1].legend(
+                title=k, bbox_to_anchor=(1, 1), loc="upper left", labelcolor="linecolor"
+            )
+            leg._legend_box.align = "left"
     plt.tight_layout()
