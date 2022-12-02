@@ -49,3 +49,4 @@ We welcome bug reports, patches, feature requests, and other comments via `the G
    :caption: Tutorials
 
    tutorials/chains
+   tutorials/fisher
