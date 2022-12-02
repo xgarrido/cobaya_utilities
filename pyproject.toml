@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=40.6.0", "wheel", "setuptools_scm", "versioneer[toml]"]
+build-backend = "setuptools.build_meta"
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440"
+versionfile_source = "cobaya_utilities/_version.py"
+versionfile_build = "cobaya_utilities/_version.py"
+tag_prefix = "v"
+parentdir_prefix = "cobaya_utilities-"
+
+[tool.black]
+line-length = 100
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+    version.*\.py
+)/
+'''
+
+[tool.isort]
+profile = "black"
+
+[tool.coverage.run]
+omit = [
+     "cobaya_utilities/tests/*",
+     "cobaya_utilities/_version.py"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+	"raise LoggedError",
+	"except AttributeError"
+]
