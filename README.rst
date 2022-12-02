@@ -5,7 +5,7 @@
 A set of tools to deal with MCMC chains and a complement to `cobaya
 <https://github.com/CobayaSampler/cobaya>`_ and `getdist <https://github.com/cmbant/getdist>`_.
 
-.. image:: https://img.shields.io/github/workflow/status/xgarrido/cobaya_utilities/Unit%20test/feature-github-actions
+.. image:: https://img.shields.io/github/workflow/status/xgarrido/cobaya_utilities/Unit%20test
    :target: https://github.com/xgarrido/cobaya_utilities/actions
 
 ..
