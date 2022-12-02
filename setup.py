@@ -17,6 +17,7 @@ setup(
     author="Xavier Garrido",
     author_email="xavier.garrido@lal.in2p3.fr",
     keywords=["cobaya", "MCMC", "plot"],
+    python_requires=">=3.8",
     classifiers=[
         "Intended Audience :: Science/Research",
         "Intended Audience :: Education",
