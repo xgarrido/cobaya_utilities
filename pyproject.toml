@@ -24,7 +24,6 @@ exclude = '''
   | buck-out
   | build
   | dist
-  | version.*.py
 )
 '''
 
