@@ -73,7 +73,7 @@ def print_chains_size(
     color_palette="Greens",
     hide_status=True,
     with_gelman_rubin=True,
-    prefix="mcmc.",
+    prefix="mcmc",
 ):
     """Print MCMC sample size given a set of directories
 
