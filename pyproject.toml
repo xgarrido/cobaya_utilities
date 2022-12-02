@@ -13,7 +13,7 @@ parentdir_prefix = "cobaya_utilities-"
 [tool.black]
 line-length = 100
 exclude = '''
-/(
+(
     \.eggs
   | \.git
   | \.hg
@@ -24,8 +24,8 @@ exclude = '''
   | buck-out
   | build
   | dist
-    version.*\.py
-)/
+  | version.*.py
+)
 '''
 
 [tool.isort]
