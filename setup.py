@@ -2,7 +2,8 @@ from setuptools import find_packages, setup
 
 setup(
     name="cobaya_utilities",
-    version="0.1",
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     packages=find_packages(),
     description="A set of functions to deal with MCMC output from cobaya",
     url="https://github.com/xgarrido/cobaya_utilities.git",
