@@ -27,7 +27,7 @@ The easiest way to install the module is
     $ pip install [--user] cobaya-utilities
 
 If you plan to made some modifications, to improve or to correct some bugs, then you need to clone
-the following respoitory
+the following repository
 
 .. code:: shell
 
