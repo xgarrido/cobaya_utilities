@@ -399,7 +399,7 @@ def plot_progress(mcmc_samples, sharex=True):
             df = pd.read_csv(
                 f, names=cols, comment="#", sep=" ", skipinitialspace=True, index_col=False
             )
-            idx = 0 if not (m := regex.match(f)) else m.group(1)
+            idx = 1 if not (m := regex.match(f)) else m.group(1)
             kwargs = dict(label=f"mcmc" + (f" #{idx}" if idx else ""), color=f"C{idx}", alpha=0.75)
             axes[i, 0].semilogy(df.N, df.Rminus1, "-o", **kwargs)
             axes[i, 0].set_ylabel(r"$R-1$")

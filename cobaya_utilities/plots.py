@@ -8,7 +8,7 @@ _use_seaborn = False
 
 
 def set_style(
-    use_seaborn=False, seaborn_style="ticks", use_svg=False, print_load_details=False, **rc
+    use_seaborn=True, seaborn_style="ticks", use_svg=True, print_load_details=False, **rc
 ):
     """Set default plot settings
 
@@ -34,13 +34,10 @@ def set_style(
 
         matplotlib_inline.backend_inline.set_matplotlib_formats("svg")
 
-    rc = {} or rc
+    rc = rc or {"axes.spines.top": False, "axes.spines.right": False, "figure.figsize": (8, 6)}
     if use_seaborn:
         _use_seaborn = True
-        sns.set_theme(
-            rc={"axes.spines.top": False, "axes.spines.right": False, "figure.figsize": (8, 6)},
-            style=seaborn_style,
-        )
+        sns.set_theme(rc=rc, style=seaborn_style)
 
 
 def get_default_settings():
