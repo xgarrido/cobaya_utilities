@@ -1,2 +1,3 @@
 sphinx-book-theme
+sphinx_copybutton
 myst-nb

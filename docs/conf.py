@@ -14,6 +14,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     "sphinx.ext.mathjax",
+    "sphinx_copybutton",
     "myst_nb",
 ]
 
@@ -43,7 +44,7 @@ html_theme_options = {
     "repository_branch": "master",
     "launch_buttons": {
         "binderhub_url": "https://mybinder.org",
-        "notebook_interface": "classic",
+        "notebook_interface": "jupyterlab",
     },
     "use_edit_page_button": True,
     "use_issues_button": True,
