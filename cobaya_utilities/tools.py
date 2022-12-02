@@ -333,7 +333,8 @@ def plot_chains(
                 if ncol is None:
                     ncol, nrow = len(selected_params), 1
                 else:
-                    nrow = len(selected_params) // ncol + 1
+                    nrow = len(selected_params) // ncol
+                    nrow += 1 if len(selected_params) > nrow * ncol else 0
                 fig = plt.figure(figsize=(15, 2 * nrow))
                 axes = [plt.subplot(nrow, ncol, i + 1) for i in range(len(selected_params))]
 
@@ -363,9 +364,9 @@ def plot_chains(
         leg = fig.legend(
             [Line2D([0], [0], color=f"C{f.split('.')[-2]}") for f in files],
             [f"mcmc #{f.split('.')[-2]}" for f in files],
-            bbox_to_anchor=(1.0, 0.6 if nrow > 1 else 1.0),
+            bbox_to_anchor=(1.0, 0.5 if nrow > 1 else 1.0),
             labelcolor="linecolor",
-            loc="upper left",
+            loc="center left",
             title=name,
         )
         leg._legend_box.align = "left"
