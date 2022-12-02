@@ -8,10 +8,6 @@ A set of tools to deal with MCMC chains and a complement to `cobaya
 .. image:: https://img.shields.io/github/workflow/status/xgarrido/cobaya_utilities/Unit%20test
    :target: https://github.com/xgarrido/cobaya_utilities/actions
 
-.. image:: https://readthedocs.org/projects/cobaya-utilities/badge/?version=latest
-   :target: https://cobaya-utilities.readthedocs.io/en/latest/?badge=latest
-   :alt: Documentation Status
-
 ..
    .. image:: https://mybinder.org/badge_logo.svg
       :target: https://mybinder.org/v2/gh/simonsobs/LAT_MFLike/master?filepath=notebooks%2Fmflike_tutorial.ipynb
@@ -26,25 +22,35 @@ Installing the code
 
 The easiest way to install the module is
 
-.. code:: shell
+.. code-block:: shell
 
     $ pip install [--user] cobaya-utilities
 
 If you plan to made some modifications, to improve or to correct some bugs, then you need to clone
 the following repository
 
-.. code:: shell
+.. code-block:: shell
 
     $ git clone https://github.com/xgarrido/cobaya_utilities.git /where/to/clone
 
 Then you can install the code and its dependencies *via*
 
-.. code:: shell
+.. code-block:: shell
 
     $ pip install -e [--user] /where/to/clone
 
-..
-   Running/testing the code
-   ------------------------
+How to Use This Guide
+---------------------
 
-   You can test the ``cobaya_utilities`` by doing
+After having successfully install ``cobaya_utilities``, you can probably learn most of what you need
+from the tutorials listed below
+
+We welcome bug reports, patches, feature requests, and other comments via `the GitHub issue tracker
+<https://github.com/xgarrido/cobaya_utilities/issues>`_.
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorials
+
+   tutorials/chains
