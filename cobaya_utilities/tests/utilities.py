@@ -76,7 +76,7 @@ def get_reference():
     if not os.path.exists(reference_filename):
         import requests
 
-        url = "https://portal.nersc.gov/cfs/sobs/users/xgarrido/cobaya_utilities_data/ref.pkl"
+        url = "https://portal.nersc.gov/cfs/sobs/users/xgarrido/cobaya_utilities_data/reference.pkl"
         print(f"Downloading reference data from {url}")
         with open(reference_filename, "wb") as f:
             f.write(requests.get(url).content)
