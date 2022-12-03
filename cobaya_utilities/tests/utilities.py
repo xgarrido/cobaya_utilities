@@ -30,7 +30,7 @@ def compare(test, ref, current, msg=""):
             np.testing.assert_almost_equal(ref.lines[i].get_xdata(), current.lines[i].get_xdata())
             np.testing.assert_almost_equal(ref.lines[i].get_ydata(), current.lines[i].get_ydata())
     elif isinstance(ref, pd.DataFrame):
-        pd.testing.assert_frame_equal(ref, current)
+        pd.testing.assert_frame_equal(ref, current, rtol=1e-2)
     else:
         test.assertTrue(False, f"Data type '{type(ref)}' are not compared!")
 
