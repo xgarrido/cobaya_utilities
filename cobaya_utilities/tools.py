@@ -96,6 +96,7 @@ def print_chains_size(
     """
     create_symlink(mcmc_samples, prefix)
     r = re.compile(r"\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
+    regex = re.compile(r".*mcmc\.([0-9]+).progress")
 
     data = {}
     for irow, (name, path) in enumerate(mcmc_samples.items()):
@@ -104,7 +105,8 @@ def print_chains_size(
             print(f"Missing log files for chains '{name}' within path '{path}'!")
             return
         for fn in sorted(files):
-            mcmc_name = f"mcmc {fn.split('.')[-2]}"
+            idx = 1 if not (m := regex.match(fn)) else m.group(1)
+            mcmc_name = f"mcmc {idx}"
             status = dict(done="[mcmc] The run has converged!", error="[mcmc] *ERROR*")
             data.setdefault(name, {}).update({(mcmc_name, "status"): "running"})
             with open(fn) as f:
@@ -126,7 +128,8 @@ def print_chains_size(
         if with_gelman_rubin:
             files = _get_chain_filenames(path, suffix=".progress")
             for fn in sorted(files):
-                mcmc_name = f"mcmc {fn.split('.')[-2]}"
+                idx = 1 if not (m := regex.match(fn)) else m.group(1)
+                mcmc_name = f"mcmc {idx}"
                 with open(fn) as f:
                     for line in f:
                         pass
