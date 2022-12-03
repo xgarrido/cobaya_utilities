@@ -272,7 +272,7 @@ def generate_yaml_config(
         if only_params and name not in only_params:
             continue
         value = float(fields.get("value"))
-        sigma = float(fields.get("$\sigma$"))
+        sigma = float(fields.get(r"$\sigma$"))
         latex = latex.replace("$", "")
         prior_min = value - sigma_scale * sigma
         prior_max = value + sigma_scale * sigma
