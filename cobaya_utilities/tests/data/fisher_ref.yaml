@@ -1,0 +1,120 @@
+cosmomc_theta:
+  prior:
+    min: 0.01039
+    max: 0.01042
+  proposal: 1.392e-07
+  latex: \theta_\mathrm{MC}
+logA:
+  prior:
+    min: 2.859
+    max: 3.229
+  proposal: 0.001848
+  latex: \log(10^{10} A_\mathrm{s})
+ombh2:
+  prior:
+    min: 0.02173
+    max: 0.02301
+  proposal: 6.42e-06
+  latex: \Omega_\mathrm{b}h^2
+omch2:
+  prior:
+    min: 0.1091
+    max: 0.1309
+  proposal: 0.0001089
+  latex: \Omega_\mathrm{c}h^2
+ns:
+  prior:
+    min: 0.9333
+    max: 0.9965
+  proposal: 0.0003158
+  latex: n_\mathrm{s}
+tau:
+  prior:
+    min: -0.04965
+    max: 0.1584
+  proposal: 0.00104
+  latex: \tau_\mathrm{reio}
+a_tSZ:
+  prior:
+    min: 2.496
+    max: 4.104
+  proposal: 0.008043
+  latex: a_\mathrm{tSZ}
+a_kSZ:
+  prior:
+    min: -0.1899
+    max: 3.39
+  proposal: 0.0179
+  latex: a_\mathrm{kSZ}
+a_p:
+  prior:
+    min: 5.392
+    max: 8.408
+  proposal: 0.01508
+  latex: a_p
+beta_p:
+  prior:
+    min: 0.08365
+    max: 4.076
+  proposal: 0.01996
+  latex: \beta_p
+a_c:
+  prior:
+    min: 2.026
+    max: 7.774
+  proposal: 0.02874
+  latex: a_c
+beta_c:
+  prior:
+    min: -0.242
+    max: 4.642
+  proposal: 0.02442
+  latex: \beta_c
+a_s:
+  prior:
+    min: 2.95
+    max: 3.25
+  proposal: 0.001505
+  latex: a_s
+a_gtt:
+  prior:
+    min: 6.089
+    max: 11.31
+  proposal: 0.02611
+  latex: a_\mathrm{dust}^\mathrm{TT}
+a_gte:
+  prior:
+    min: -0.132
+    max: 0.132
+  proposal: 0.00132
+  latex: a_\mathrm{dust}^\mathrm{TE}
+a_gee:
+  prior:
+    min: -0.02077
+    max: 0.02077
+  proposal: 0.0002077
+  latex: a_\mathrm{dust}^\mathrm{EE}
+a_psee:
+  prior:
+    min: -0.04829
+    max: 0.04829
+  proposal: 0.0004829
+  latex: a_\mathrm{ps}^\mathrm{EE}
+a_pste:
+  prior:
+    min: -0.03825
+    max: 0.03825
+  proposal: 0.0003825
+  latex: a_\mathrm{ps}^\mathrm{TE}
+xi:
+  prior:
+    min: -0.2893
+    max: 0.4893
+  proposal: 0.003893
+  latex: \xi
+T_d:
+  prior:
+    min: -20.77
+    max: 39.97
+  proposal: 0.3037
+  latex: T_d

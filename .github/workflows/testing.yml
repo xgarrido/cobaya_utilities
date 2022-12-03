@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.8, 3.9]
+        python-version: ["3.8", "3.9", "3.10"]
 
     steps:
     - uses: actions/checkout@v3
@@ -19,12 +19,30 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Set gfortran link on macos-latest
+      if: matrix.os == 'macos-latest'
+      run: |
+        set -x
+        sudo ln -s /usr/local/bin/gfortran-11 /usr/local/bin/gfortran
+        gfortran --version
+
     - name: Install dependencies via pip
       run: |
-        python -m pip install --upgrade pip
-        pip install .
+        python -m pip install --upgrade pip wheel
+        python -m pip install numpy pytest pytest-cov requests
+        python -m pip install camb git+https://github.com/simonsobs/LAT_MFLike.git
+        python -m pip install -e .
 
-    # - name: Unit tests
+    - name: Unit tests
+      run: |
+        pytest -vv cobaya_utilities --cov=cobaya_utilities --cov-report=xml:coverage.xml
+
+    - name: Report Coverage (codecov)
+      if: matrix.os == 'ubuntu-latest'
+      uses: codecov/codecov-action@v2
+
+    # - name: Test notebooks (Only on Linux for saving time)
+    #   if: matrix.os == 'ubuntu-latest'
     #   run: |
-    #     pip install camb
-    #     python -m unittest planck_2020_hillipop.tests.test_hillipop
+    #     pip install jupyter
+    #     jupyter nbconvert --to notebook --execute notebooks/tutorial_io.ipynb

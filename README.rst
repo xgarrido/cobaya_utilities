@@ -15,13 +15,12 @@ A set of tools to deal with MCMC chains and a complement to `cobaya
    :target: https://cobaya-utilities.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
-..
-   .. image:: https://mybinder.org/badge_logo.svg
-      :target: https://mybinder.org/v2/gh/simonsobs/LAT_MFLike/master?filepath=notebooks%2Fmflike_tutorial.ipynb
+.. image:: https://mybinder.org/badge_logo.svg
+   :target: https://mybinder.org/v2/gh/xgarrido/cobaya_utilities/master
 
 
-   .. image:: https://codecov.io/gh/simonsobs/LAT_MFLike/branch/master/graph/badge.svg?token=qrrVcbNCs5
-      :target: https://codecov.io/gh/simonsobs/LAT_MFLike
+.. image:: https://codecov.io/gh/xgarrido/cobaya_utilities/branch/master/graph/badge.svg?token=qrrVcbNCs5
+   :target: https://codecov.io/gh/xgarrido/cobaya_utilities
 
 
 Installing the code
