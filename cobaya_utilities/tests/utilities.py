@@ -68,11 +68,11 @@ def generate_mcmc():
 
 
 def generate_pickle(data):
-    pickle.dump(data, open(os.path.join(data_path, "ref.pkl"), "wb"))
+    pickle.dump(data, open(os.path.join(data_path, "reference.pkl"), "wb"))
 
 
 def get_reference():
-    reference_filename = os.path.join(data_path, "ref.pkl")
+    reference_filename = os.path.join(data_path, "reference.pkl")
     if not os.path.exists(reference_filename):
         import requests
 
