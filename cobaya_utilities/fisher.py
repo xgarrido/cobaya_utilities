@@ -221,6 +221,7 @@ def plot_fisher_matrix(matrix=None, use_relplot=True, reset_cache=False, **matri
             linewidths=0.5,
             cbar_kws={"shrink": 0.5},
         )
+    return g.fig.axes
 
 
 def generate_yaml_config(
