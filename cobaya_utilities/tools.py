@@ -14,14 +14,14 @@ def _get_chain_filenames(path, prefix="mcmc", suffix=".txt"):
         [
             f
             for f in glob.glob(os.path.join(path, f"{prefix}*{suffix}"))
-            if re.match(f"{prefix}(\.|)([0-9]+|){re.escape(suffix)}", os.path.basename(f))
+            if re.match(rf"{prefix}(\.|)([0-9]+|){re.escape(suffix)}", os.path.basename(f))
         ]
     )
 
 
 def create_symlink(mcmc_samples, prefix="mcmc"):
     """Create missing files when running chains without mpi support (as it is done in CC in2p3)"""
-    regex = re.compile(f".*{prefix}.*\.([0-9]+.txt)")
+    regex = re.compile(rf".*{prefix}.*\.([0-9]+.txt)")
     for name, path in mcmc_samples.items():
         if files := _get_chain_filenames(path, prefix=prefix):
             continue
@@ -39,7 +39,7 @@ def create_symlink(mcmc_samples, prefix="mcmc"):
 
 
 def plot_chains_progress(mcmc_samples):
-    r = re.compile("\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
+    r = re.compile(r"\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
     data = []
     for name, path in mcmc_samples.items():
         files = _get_chain_filenames(path, suffix=".log")
@@ -95,7 +95,7 @@ def print_chains_size(
       prefix for chain names (default is "mcmc.")
     """
     create_symlink(mcmc_samples, prefix)
-    r = re.compile("\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
+    r = re.compile(r"\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
 
     data = {}
     for irow, (name, path) in enumerate(mcmc_samples.items()):
@@ -297,7 +297,7 @@ def plot_chains(
     markers = markers or {}
     markers_args = markers_args or dict(color="0.15", ls="--", lw=1)
     stored_axes = {}
-    regex = re.compile(f".*{prefix}\.([0-9]+).txt")
+    regex = re.compile(rf".*{prefix}\.([0-9]+).txt")
     for name, path in mcmc_samples.items():
         axes = None
 
@@ -391,7 +391,7 @@ def plot_progress(mcmc_samples, sharex=True):
     fig, axes = plt.subplots(nrows, ncols, figsize=(15, 3 * nrows), sharex=sharex)
     axes = np.atleast_2d(axes)
 
-    regex = re.compile(".*mcmc\.([0-9]+).progress")
+    regex = re.compile(r".*mcmc\.([0-9]+).progress")
     for i, (k, v) in enumerate(mcmc_samples.items()):
         files = _get_chain_filenames(v, suffix=".progress")
         for f in files:
@@ -412,3 +412,4 @@ def plot_progress(mcmc_samples, sharex=True):
             )
             leg._legend_box.align = "left"
     plt.tight_layout()
+    return axes
