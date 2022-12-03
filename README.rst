@@ -46,6 +46,11 @@ Then you can install the code and its dependencies *via*
 
     $ pip install -e [--user] /where/to/clone
 
+Documentation
+-------------
+
+Read the docs at `cobaya-utilities.readthedocs.io <http://cobaya-utilities.readthedocs.io>`_.
+
 ..
    Running/testing the code
    ------------------------
