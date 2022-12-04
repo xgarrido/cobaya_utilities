@@ -45,15 +45,20 @@ Then you can install the code and its dependencies *via*
 
     $ pip install -e [--user] /where/to/clone
 
+
+Running/testing the code
+------------------------
+
+You can test the ``cobaya_utilities`` module (assuming you have ``pytest`` installed) by doing
+
+.. code:: shell
+
+    $ pytest
+
+
 .. end_before_documentation
 
 Documentation
 -------------
 
 Read the docs at `cobaya-utilities.readthedocs.io <http://cobaya-utilities.readthedocs.io>`_.
-
-..
-   Running/testing the code
-   ------------------------
-
-   You can test the ``cobaya_utilities`` by doing
