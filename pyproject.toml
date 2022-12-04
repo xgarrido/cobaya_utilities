@@ -33,6 +33,7 @@ profile = "black"
 [tool.coverage.run]
 omit = [
      "cobaya_utilities/tests/*",
+     "cobaya_utilities/plots.py",
      "cobaya_utilities/_version.py"
 ]
 
