@@ -46,6 +46,7 @@ Then you can install the code and its dependencies *via*
     $ pip install -e [--user] /where/to/clone
 
 .. end_before_documentation
+
 Documentation
 -------------
 
