@@ -108,7 +108,6 @@ def print_chains_size(
         for fn in sorted(files):
             idx = 1 if not (m := regex_log.match(fn)) else m.group(1)
             mcmc_name = f"mcmc {idx}"
-            print(mcmc_name, idx)
             status = dict(done="[mcmc] The run has converged!", error="[mcmc] *ERROR*")
             data.setdefault(name, {}).update({(mcmc_name, "status"): "running"})
             with open(fn) as f:
