@@ -2,3 +2,9 @@
 */__pycache__/
 /docs/tutorials/.ipynb_checkpoints/
 /docs/build/
+/cobaya_utilities/tests/data/chains/mcmc.checkpoint
+/cobaya_utilities/tests/data/chains/mcmc.input.yaml
+/cobaya_utilities/tests/data/fisher_current.yaml
+/cobaya_utilities/tests/data/reference.pkl
+/docs/tutorials/chains/
+/docs/tutorials/gaussian_mixture.yml
