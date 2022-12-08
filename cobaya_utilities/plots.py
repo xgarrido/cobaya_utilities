@@ -25,6 +25,8 @@ def set_style(
       set seaborn style (default: `ticks`)
     use_svg: bool
       use `svg` output format for figure
+    use_tex: bool
+      use LaTeX axis labels
     print_load_details: bool
       print load details when getdist loads samples
     rc: dict
