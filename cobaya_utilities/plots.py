@@ -8,7 +8,12 @@ _use_seaborn = False
 
 
 def set_style(
-    use_seaborn=True, seaborn_style="ticks", use_svg=True, print_load_details=False, **rc
+    use_seaborn=True,
+    seaborn_style="ticks",
+    use_svg=True,
+    use_tex=False,
+    print_load_details=False,
+    **rc,
 ):
     """Set default plot settings
 
@@ -25,30 +30,68 @@ def set_style(
     rc: dict
       overload matplotlib rc parameters
     """
+    global _use_seaborn
+    _use_seaborn = use_seaborn
     import getdist
 
     getdist.chains.print_load_details = print_load_details
+
+    if use_tex and use_svg:
+        print("Using latex text with svg output format does not play well. Disable the later one")
+        use_svg = False
 
     if use_svg:
         import matplotlib_inline
 
         matplotlib_inline.backend_inline.set_matplotlib_formats("svg")
 
-    rc = rc or {"axes.spines.top": False, "axes.spines.right": False, "figure.figsize": (8, 6)}
+    rc = rc or {}
+    if use_tex:
+        rc.update({"text.usetex": True})
     if use_seaborn:
-        _use_seaborn = True
-        sns.set_theme(rc=rc, style=seaborn_style)
+        rc.update({"axes.spines.top": False, "axes.spines.right": False, "figure.figsize": (8, 6)})
+        sns.set_theme(rc=rc, style=seaborn_style, context=None if use_tex else "notebook")
+    else:
+        plt.rcParams.update(rc)
 
 
-def get_default_settings():
-    """Set default getdist plot settings"""
+def get_default_settings(palette="tab10", colors=None, linewidth=2, num_plot_contours=3):
+    """Set default getdist plot settings
+
+    Parameters
+    ----------
+    palette: str
+      color palette name to be used for individual colors
+    colors: list
+      list of colors to be used
+    linewidth: float
+      line width of contours and KDE distributions (default: 2)
+    num_plot_contours: int
+      number of contour levels (default: 3)
+    """
+    global _use_seaborn
+    if not colors:
+        colors = sns.color_palette(palette, n_colors=10)
+    if _use_seaborn:
+        colors = sns.color_palette()
+    if palette in ["tab10"]:
+        import matplotlib as mpl
+
+        for code, color in zip(
+            ["blue", "orange", "green", "red", "purple", "brown", "pink", "gray", "yellow", "cyan"],
+            colors,
+        ):
+            rgb = mpl.colors.colorConverter.to_rgb(color)
+            mpl.colors.colorConverter.colors[code] = rgb
+            mpl.colors.colorConverter.cache[code] = rgb
+
     from getdist.plots import GetDistPlotSettings
 
     plot_settings = GetDistPlotSettings()
-    plot_settings.num_plot_contours = 3
-    plot_settings.solid_colors = "tab10"
-    plot_settings.line_styles = "tab10"
-    plot_settings.linewidth = 2
+    plot_settings.solid_colors = colors
+    plot_settings.line_styles = colors
+    plot_settings.num_plot_contours = num_plot_contours
+    plot_settings.linewidth = linewidth
     plot_settings.legend_fontsize = 15
     plot_settings.legend_colored_text = True
     return plot_settings
