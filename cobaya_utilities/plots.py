@@ -50,6 +50,8 @@ def set_style(
             rgb = mpl.colors.colorConverter.to_rgb(color)
             mpl.colors.colorConverter.colors[code] = rgb
             mpl.colors.colorConverter.cache[code] = rgb
+    else:
+        sns.set_palette(palette, n_colors=10)
 
     import getdist
 
