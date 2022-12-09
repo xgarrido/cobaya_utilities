@@ -8,8 +8,10 @@ _use_seaborn = False
 
 
 def set_style(
-    use_seaborn=True,
+    use_seaborn=False,
     seaborn_style="ticks",
+    seaborn_context="paper",
+    palette="tab10",
     use_svg=True,
     use_tex=False,
     print_load_details=False,
@@ -23,6 +25,10 @@ def set_style(
       use seaborn theming option
     seaborn_style: str
       set seaborn style (default: `ticks`)
+    seaborn_context: str
+      set seaborn context (default: `paper`)
+    palette: str
+      color palette name to be used for individual colors (default: tab10)
     use_svg: bool
       use `svg` output format for figure
     use_tex: bool
@@ -34,6 +40,17 @@ def set_style(
     """
     global _use_seaborn
     _use_seaborn = use_seaborn
+    if palette in ["tab10", "pastel", "muted", "bright", "deep", "colorblind", "dark"]:
+        import matplotlib as mpl
+
+        for code, color in zip(
+            ["blue", "orange", "green", "red", "purple", "brown", "pink", "gray", "yellow", "cyan"],
+            sns.color_palette(palette),
+        ):
+            rgb = mpl.colors.colorConverter.to_rgb(color)
+            mpl.colors.colorConverter.colors[code] = rgb
+            mpl.colors.colorConverter.cache[code] = rgb
+
     import getdist
 
     getdist.chains.print_load_details = print_load_details
@@ -47,23 +64,20 @@ def set_style(
 
         matplotlib_inline.backend_inline.set_matplotlib_formats("svg")
 
-    rc = rc or {}
+    rc = rc or {"axes.spines.top": False, "axes.spines.right": False}
     if use_tex:
         rc.update({"text.usetex": True})
     if use_seaborn:
-        rc.update({"axes.spines.top": False, "axes.spines.right": False, "figure.figsize": (8, 6)})
-        sns.set_theme(rc=rc, style=seaborn_style, context=None if use_tex else "notebook")
+        sns.set_theme(rc=rc, style=seaborn_style, context=None if use_tex else seaborn_context)
     else:
         plt.rcParams.update(rc)
 
 
-def get_default_settings(palette="tab10", colors=None, linewidth=2, num_plot_contours=3):
+def get_default_settings(colors=None, linewidth=2, num_plot_contours=3):
     """Set default getdist plot settings
 
     Parameters
     ----------
-    palette: str
-      color palette name to be used for individual colors
     colors: list
       list of colors to be used
     linewidth: float
@@ -73,19 +87,7 @@ def get_default_settings(palette="tab10", colors=None, linewidth=2, num_plot_con
     """
     global _use_seaborn
     if not colors:
-        colors = sns.color_palette(palette, n_colors=10)
-    if _use_seaborn:
-        colors = sns.color_palette()
-    if palette in ["tab10"]:
-        import matplotlib as mpl
-
-        for code, color in zip(
-            ["blue", "orange", "green", "red", "purple", "brown", "pink", "gray", "yellow", "cyan"],
-            colors,
-        ):
-            rgb = mpl.colors.colorConverter.to_rgb(color)
-            mpl.colors.colorConverter.colors[code] = rgb
-            mpl.colors.colorConverter.cache[code] = rgb
+        colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
     from getdist.plots import GetDistPlotSettings
 
