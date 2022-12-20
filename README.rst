@@ -8,8 +8,9 @@ A set of tools to deal with MCMC chains and a complement to `cobaya
 .. image:: https://img.shields.io/pypi/v/cobaya-utilities.svg?style=flat
    :target: https://pypi.python.org/pypi/cobaya-utilities
 
-.. image:: https://img.shields.io/github/workflow/status/xgarrido/cobaya_utilities/Unit%20test
+.. image:: https://img.shields.io/github/actions/workflow/status/xgarrido/cobaya_utilities/testing.yml?branch=master
    :target: https://github.com/xgarrido/cobaya_utilities/actions
+   :alt: GitHub Workflow Status
 
 .. image:: https://readthedocs.org/projects/cobaya-utilities/badge/?version=latest
    :target: https://cobaya-utilities.readthedocs.io/en/latest/?badge=latest
