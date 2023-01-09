@@ -214,7 +214,7 @@ def print_results(samples, params, labels, limit=1):
     """
     params = params if isinstance(params, list) else list(params.keys())
     labels = labels if isinstance(labels, list) else list(labels.keys())
-    d = {}
+    d, cols = {}, {}
     r = re.compile(r"(.*)(=|<|>)(.*)")
     for param in params:
         for sample in samples:
@@ -225,20 +225,23 @@ def print_results(samples, params, labels, limit=1):
                     if "<" in latex or ">" in latex:
                         latex = sample.getInlineLatex(par, limit=2)
                     break
-            assert latex is not None, f"Parameter '{param}' not found!"
-            found = r.findall(latex)
-            assert (
-                len(found) == 1
-            ), f"Something gets wrong when retrieving limits for '{param}' parameter!"
-            name, sign, value = found[0]
-            name = name.replace(" ", "")
+            if not latex:
+                value = " "
+            else:
+                # assert latex is not None, f"Parameter '{param}' not found!"
+                found = r.findall(latex)
+                assert (
+                    len(found) == 1
+                ), f"Something gets wrong when retrieving limits for '{param}' parameter!"
+                name, sign, value = found[0]
+                name = name.replace(" ", "")
+                if param not in cols:
+                    cols[param] = f"${name}$"
             if "---" in value:
-                value = "$-$"
-            d.setdefault(f"${name}$", []).append(
-                f"${value}$" if sign == "=" else f"${sign}{value}$"
-            )
+                value = "-"
+            d.setdefault(param, []).append(f"${value}$" if sign == "=" else f"${sign}{value}$")
     df = pd.DataFrame(d, index=labels[: len(samples)])
-    return df
+    return df.rename(columns=cols)
 
 
 def plot_chains(
