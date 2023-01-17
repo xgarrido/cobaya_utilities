@@ -12,7 +12,7 @@ def set_style(
     seaborn_style="ticks",
     seaborn_context="paper",
     palette="tab10",
-    use_svg=True,
+    use_svg=False,
     use_tex=False,
     print_load_details=False,
     **rc,
@@ -38,15 +38,49 @@ def set_style(
     rc: dict
       overload matplotlib rc parameters
     """
-    global _use_seaborn
-    _use_seaborn = use_seaborn
-    if palette in ["tab10", "pastel", "muted", "bright", "deep", "colorblind", "dark"]:
-        import matplotlib as mpl
 
-        for code, color in zip(
-            ["blue", "orange", "green", "red", "purple", "brown", "pink", "gray", "yellow", "cyan"],
-            sns.color_palette(palette),
-        ):
+    colors = None
+    if palette == "the-lab":
+        colors = dict(
+            blue="#015692",
+            orange="#b75501",
+            green="#54790d",
+            red="#c02d2e",
+            purple="#803378",
+            gray="#656e77",
+        )
+    elif palette == "getdist":
+        colors = dict(blue="#006FED", red="#E03424", green="#009966")
+    elif use_seaborn:
+        palette = "deep"
+
+    _default_color_cycle = [
+        "blue",
+        "orange",
+        "green",
+        "red",
+        "purple",
+        "brown",
+        "pink",
+        "gray",
+        "yellow",
+        "cyan",
+    ]
+    if colors:
+        for color, code in colors.items():
+            rgb = mpl.colors.colorConverter.to_rgb(color)
+            mpl.colors.colorConverter.colors[code] = rgb
+            mpl.colors.colorConverter.cache[code] = rgb
+
+        _default_prop_cycle = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
+        mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
+            color=[
+                colors.get(color, _default_prop_cycle[i])
+                for i, k in enumerate(_default_color_cycle)
+            ]
+        )
+    elif palette in ["tab10", "pastel", "muted", "bright", "deep", "colorblind", "dark"]:
+        for code, color in zip(_default_color_cycle, sns.color_palette(palette)):
             rgb = mpl.colors.colorConverter.to_rgb(color)
             mpl.colors.colorConverter.colors[code] = rgb
             mpl.colors.colorConverter.cache[code] = rgb
@@ -87,7 +121,6 @@ def get_default_settings(colors=None, linewidth=2, num_plot_contours=3):
     num_plot_contours: int
       number of contour levels (default: 3)
     """
-    global _use_seaborn
     if not colors:
         colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
@@ -103,6 +136,18 @@ def get_default_settings(colors=None, linewidth=2, num_plot_contours=3):
     return plot_settings
 
 
+def get_mc_samples(mcmc_samples, prefix="mcmc", burnin=0.4, no_cache=False):
+    from getdist.plots import loadMCSamples
+
+    samples = [
+        loadMCSamples(
+            os.path.join(path, prefix), settings={"ignore_rows": burnin}, no_cache=no_cache
+        )
+        for path in mcmc_samples.values()
+    ]
+    return list(mcmc_samples.keys()), samples
+
+
 def show_inputs(axes, inputs, colors=None):
     """Show inputs values on a given set of axes
 
@@ -115,14 +160,17 @@ def show_inputs(axes, inputs, colors=None):
     colors: list
       list of colors to be applied
     """
+    axes = axes if isinstance(axes, list) else axes.flatten()
     for i, ax in enumerate(axes):
+        if not ax:
+            continue
         x = np.linspace(*ax.get_xlim(), 100)
         for j, values in enumerate(inputs):
             mean, sigma = values[i]
-            if mean is None:
+            if not mean:
                 continue
             y = stats.norm.pdf(x, mean, sigma)
-            color = colors[j] if colors is not None else f"C{j}"
+            color = colors[j] if colors else f"C{j}"
             ax.plot(x, y / np.max(y), color=color, ls="--")
 
 
@@ -325,3 +373,26 @@ def plot_mean_distributions(samples, params, colors="0.7", return_results=False,
 
     if return_results:
         return pd.DataFrame.from_dict(results, orient="index")
+
+
+def add_legend(fig=None, ax=None, labels=None, colors=None, ls=None, **kwargs):
+    from matplotlib.lines import Line2D
+
+    if not fig and not ax:
+        raise ValueError("Missing either fig or axis instance!")
+
+    colors = colors or [None for label in labels]
+    ls = ls or ["-" for label in labels]
+    handles = [Line2D([0], [0], color=colors[i], ls=ls[i]) for i, label in enumerate(labels)]
+
+    obj = fig or ax
+    leg = obj.legend(
+        handles,
+        labels,
+        bbox_to_anchor=kwargs.get("bbox_to_anchor", (0.5, 1)),
+        labelcolor=kwargs.get("labelcolor", "linecolor"),
+        loc=kwargs.get("loc", "center"),
+        title=kwargs.get("title"),
+        ncol=kwargs.get("ncol", 1),
+    )
+    leg._legend_box.align = "left"
