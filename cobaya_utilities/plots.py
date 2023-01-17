@@ -1,10 +1,25 @@
+import os
+from dataclasses import dataclass
+from typing import Optional
+
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from scipy import stats
 
-_use_seaborn = False
+
+@dataclass
+class Sample:
+    path: str
+    label: str
+    color: Optional[str] = None
+
+
+@dataclass
+class SampleCollection:
+    samples: list[Sample] = None
 
 
 def set_style(
