@@ -99,7 +99,7 @@ def print_chains_size(
     regex_log = re.compile(r".*mcmc\.([0-9]+).log")
     regex_progress = re.compile(r".*mcmc\.([0-9]+).progress")
 
-    found_rminus1 = False
+    found_rminus1 = []
     data = {}
     for irow, (name, path) in enumerate(mcmc_samples.items()):
         files = _get_chain_filenames(path, prefix=prefix, suffix=".log")
@@ -145,7 +145,7 @@ def print_chains_size(
                     if line.startswith("#"):
                         continue
                     data[name].update({(mcmc_name, "R-1"): f"{float(line.split()[-2]):.2f}"})
-                    found_rminus1 = True
+                    found_rminus1 += [mcmc_name]
 
     df = pd.DataFrame.from_dict(data, orient="index")
     df.dropna(axis=1, how="all", inplace=True)
@@ -179,7 +179,11 @@ def print_chains_size(
         s.background_gradient(subset=[(name, "rate") for name in mcmc_names], cmap=cm, axis=None)
         if with_gelman_rubin and found_rminus1:
             cm = sns.color_palette(color_palette + "_r", as_cmap=True)
-            s.text_gradient(subset=[(name, "R-1") for name in mcmc_names], cmap=cm, axis=None)
+            s.text_gradient(
+                subset=[(name, "R-1") for name in mcmc_names if name in found_rminus1],
+                cmap=cm,
+                axis=None,
+            )
             # s.highlight_null(color="white")
         s.background_gradient(
             subset=[(all_name, "total")], cmap=sns.color_palette("Blues", as_cmap=True)
