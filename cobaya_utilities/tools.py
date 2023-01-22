@@ -99,6 +99,7 @@ def print_chains_size(
     regex_log = re.compile(r".*mcmc\.([0-9]+).log")
     regex_progress = re.compile(r".*mcmc\.([0-9]+).progress")
 
+    found_rminus1 = False
     data = {}
     for irow, (name, path) in enumerate(mcmc_samples.items()):
         files = _get_chain_filenames(path, prefix=prefix, suffix=".log")
@@ -106,6 +107,7 @@ def print_chains_size(
             print(f"Missing log files for chains '{name}' within path '{path}'!")
             return
         for fn in sorted(files):
+            total_steps = 0
             idx = 1 if not (m := regex_log.match(fn)) else m.group(1)
             mcmc_name = f"mcmc {idx}"
             status = dict(done="[mcmc] The run has converged!", error="[mcmc] *ERROR*")
@@ -119,8 +121,14 @@ def print_chains_size(
                     found = r.findall(line)
                     if len(found) == 0:
                         continue
-                    time, total_steps, accepted_steps = found[0]
-            total_steps, accepted_steps = int(total_steps), int(accepted_steps)
+                    time, current_steps, accepted_steps = found[0]
+                    current_steps = int(current_steps)
+                    total_steps = (
+                        current_steps
+                        if current_steps > total_steps
+                        else total_steps + current_steps
+                    )
+            accepted_steps = int(accepted_steps)
             rate = accepted_steps / total_steps
             for field, content in zip(
                 ["accept.", "total", "rate", "R-1"], [accepted_steps, total_steps, rate, None]
@@ -137,6 +145,7 @@ def print_chains_size(
                     if line.startswith("#"):
                         continue
                     data[name].update({(mcmc_name, "R-1"): f"{float(line.split()[-2]):.2f}"})
+                    found_rminus1 = True
 
     df = pd.DataFrame.from_dict(data, orient="index")
     df.dropna(axis=1, how="all", inplace=True)
@@ -168,7 +177,7 @@ def print_chains_size(
     if with_color_gradient:
         cm = sns.color_palette(color_palette, as_cmap=True)
         s.background_gradient(subset=[(name, "rate") for name in mcmc_names], cmap=cm, axis=None)
-        if with_gelman_rubin:
+        if with_gelman_rubin and found_rminus1:
             cm = sns.color_palette(color_palette + "_r", as_cmap=True)
             s.text_gradient(subset=[(name, "R-1") for name in mcmc_names], cmap=cm, axis=None)
             # s.highlight_null(color="white")
@@ -259,31 +268,31 @@ def plot_chains(
 ):
     """Plot MCMC sample evolution
 
-    Parameters
-    ----------
-    mcmc_samples: dict
-      a dict holding a name as key for the sample and a corresponding directory as value.
-    params: dict or list
-      a dict holding the parameter names for the different mcmc_samples or
-      a unique list of parameter names
-    ncol: int
-      the number of columns within the plot
-    highlight_burnin: float
-      the fraction of samples to highlight (below the burnin value, the color is faded)
-    ignore_rows: float
-      the fraction of samples to ignore
-    show_mean_std: bool
-      show the mean/std values over the different samples
-    show_only_mcmc: int or list
-      only show chains given their number
-    no_cache: bool
-      remove the getdist cache
-    markers: dict
-      dictionnary holding the "expected" value for a parameter
-    markers_args: dict
-      marker kwargs to pass to plt.axhline
-    prefix: str
-      prefix name of chains
+        Parameters
+        ----------
+        mcmc_samples: dict
+          a dict holding a name as key for the sample and a corresponding directory as value.
+        params: dict or list
+          a dict holding the parameter names for the different mcmc_samples or
+          a unique list of parameter names
+        ncol: int
+          the number of columns within the plot
+        highlight_burnin: float
+          the fraction of samples to highlight (below the burnin value, the color is faded)
+        ignore_rows: float
+          the fraction of samples to ignore
+        show_mean_std: bool
+          show the mean/std values over the different samples
+        show_only_mcmc: int or list
+          only show chains given their number
+        no_cache: bool
+          remove the getdist cache
+        markers: dict
+    :      dictionnary holding the "expected" value for a parameter
+        markers_args: dict
+          marker kwargs to pass to plt.axhline
+        prefix: str
+          prefix name of chains
     """
     create_symlink(mcmc_samples, prefix)
     from getdist import loadMCSamples
