@@ -355,8 +355,8 @@ def plot_chains(
                 else:
                     nrow = len(selected_params) // ncol
                     nrow += 1 if len(selected_params) > nrow * ncol else 0
-                fig = plt.figure(figsize=(15, 2 * nrow))
-                axes = [plt.subplot(nrow, ncol, i + 1) for i in range(len(selected_params))]
+                fig, axes = plt.subplots(nrow, ncol, sharex=True, figsize=(15, 2 * nrow))
+                axes = axes.flatten()
 
             color = f"C{imcmc}"
             if samples.shape[0] < min_chain_size:
@@ -381,6 +381,8 @@ def plot_chains(
                 for sign in [-1, +1]:
                     axes[i].axhline(mu + std * sign, color="0.6", ls="--", lw=1)
 
+        # Remove axes with no data inside
+        _ = [fig.delaxes(ax) for ax in axes if not len(ax.get_lines())]
         leg = fig.legend(
             [Line2D([0], [0], color=f"C{f.split('.')[-2]}") for f in files],
             [f"mcmc #{f.split('.')[-2]}" for f in files],
