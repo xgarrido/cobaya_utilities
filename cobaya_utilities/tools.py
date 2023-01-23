@@ -177,14 +177,14 @@ def print_chains_size(
     if with_color_gradient:
         cm = sns.color_palette(color_palette, as_cmap=True)
         s.background_gradient(subset=[(name, "rate") for name in mcmc_names], cmap=cm, axis=None)
-        if with_gelman_rubin and found_rminus1:
-            cm = sns.color_palette(color_palette + "_r", as_cmap=True)
-            s.text_gradient(
-                subset=[(name, "R-1") for name in mcmc_names if name in found_rminus1],
-                cmap=cm,
-                axis=None,
-            )
-            # s.highlight_null(color="white")
+        # if with_gelman_rubin and found_rminus1:
+        #     cm = sns.color_palette(color_palette + "_r", as_cmap=True)
+        #     s.text_gradient(
+        #         subset=[(name, "R-1") for name in mcmc_names if name in found_rminus1],
+        #         cmap=cm,
+        #         axis=None,
+        #     )
+        #     # s.highlight_null(color="white")
         s.background_gradient(
             subset=[(all_name, "total")], cmap=sns.color_palette("Blues", as_cmap=True)
         )
