@@ -163,49 +163,51 @@ def get_mc_samples(mcmc_samples, prefix="mcmc", burnin=0.4, no_cache=False):
     return list(mcmc_samples.keys()), samples
 
 
-def show_inputs(axes, inputs, colors=None):
-    """Show inputs values on a given set of axes
-
+def show_inputs(g, inputs, color=None, ls="--"):
+    """Show input/reference values on a given set of axes
     Parameters
     ----------
-    axes: array
-      array of matplotlib axes
+    g: getdist.plots
+      the getdist plotter instance
     inputs: dict
       dictionary holding loc/scale value for normal distribution
-    colors: list
-      list of colors to be applied
+    color: str
+      the color name
+    ls: str
+      the line style
     """
-    axes = axes if isinstance(axes, list) else axes.flatten()
-    for i, ax in enumerate(axes):
-        if not ax:
+    for par, val in inputs.items():
+        if not (ax := g.get_axes_for_params(par)):
             continue
-        x = np.linspace(*ax.get_xlim(), 100)
-        for j, values in enumerate(inputs):
-            mean, sigma = values[i]
-            if not mean:
-                continue
-            y = stats.norm.pdf(x, mean, sigma)
-            color = colors[j] if colors else f"C{j}"
-            ax.plot(x, y / np.max(y), color=color, ls="--")
+        if isinstance(val, float):
+            ax.axvhline(val, color=color, ls=ls)
+        else:
+            x = np.linspace(*ax.get_xlim(), 100)
+            y = stats.norm.pdf(x, *val)
+            ax.plot(x, y / y.max(), color=color, ls=ls)
 
 
-def show_tau_prior(ax, loc=0.054, scale=0.0073):
+def show_tau_prior(g, loc=0.054, scale=0.0073, color="gray", ls="--"):
     """Dedicated function to plot tau prior
 
     Parameters
     ----------
-    ax: matplotlib.axis
-      the axis where to plot tau prior
+    g: getdist.plots
+      the getdist plotter instance
     loc: float
       the central tau value
     scale: float
       the scale/sigma of tau value
+    color: str
+      the color name
+    ls: str
+      the line style
     """
     from matplotlib.lines import Line2D
 
-    show_inputs([ax], inputs=[[(loc, scale)]], colors=["gray"])
-    ax.legend(
-        [Line2D([0], [0], color="gray", ls="--")],
+    show_inputs(g, inputs=dict(tau=(loc, scale)), color=color, ls=ls)
+    g.get_axes_for_params("tau").legend(
+        [Line2D([0], [0], color=color, ls=ls)],
         [r"$\tau$ prior"],
         loc="upper left",
         bbox_to_anchor=(1, 1),
