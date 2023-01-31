@@ -180,7 +180,7 @@ def show_inputs(g, inputs, color=None, ls="--"):
         if not (ax := g.get_axes_for_params(par)):
             continue
         if isinstance(val, float):
-            ax.axvhline(val, color=color, ls=ls)
+            ax.axvline(val, color=color, ls=ls)
         else:
             x = np.linspace(*ax.get_xlim(), 100)
             y = stats.norm.pdf(x, *val)
