@@ -85,7 +85,6 @@ def get_reference():
 
 
 def generate_chains():
-
     generate_mcmc()
 
     from cobaya_utilities import tools
