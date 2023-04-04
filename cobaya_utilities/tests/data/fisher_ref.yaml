@@ -14,7 +14,7 @@ ombh2:
   prior:
     min: 0.02173
     max: 0.02301
-  proposal: 6.42e-06
+  proposal: 6.425e-06
   latex: \Omega_\mathrm{b}h^2
 omch2:
   prior:
@@ -30,9 +30,9 @@ ns:
   latex: n_\mathrm{s}
 tau:
   prior:
-    min: -0.04965
-    max: 0.1584
-  proposal: 0.00104
+    min: -0.04966
+    max: 0.1585
+  proposal: 0.001041
   latex: \tau_\mathrm{reio}
 a_tSZ:
   prior:
@@ -54,7 +54,7 @@ a_p:
   latex: a_p
 beta_p:
   prior:
-    min: 0.08365
+    min: 0.08368
     max: 4.076
   proposal: 0.01996
   latex: \beta_p

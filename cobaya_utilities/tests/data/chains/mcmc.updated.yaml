@@ -45,6 +45,7 @@ sampler:
     proposal_scale: 2.4
     output_every: 60s
     learn_every: 40d
+    temperature: 1
     learn_proposal: true
     learn_proposal_Rminus1_max: 2.0
     learn_proposal_Rminus1_max_early: 30.0
@@ -69,6 +70,6 @@ sampler:
     oversample: null
     drag_limits: null
     fallback_covmat_scale: 4
-    version: 3.2.2
+    version: '3.3'
 output: mcmc
-version: 3.2.2
+version: '3.3'
