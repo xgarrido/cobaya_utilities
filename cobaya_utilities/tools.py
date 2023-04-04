@@ -416,12 +416,13 @@ def plot_progress(mcmc_samples, sharex=True):
     regex = re.compile(r".*mcmc\.([0-9]+).progress")
     for i, (k, v) in enumerate(mcmc_samples.items()):
         files = _get_chain_filenames(v, suffix=".progress")
-        for f in files:
-            cols = [a.strip() for a in open(f).readline().lstrip("#").split()]
+        for fn in files:
+            with open(fn) as f:
+                cols = [a.strip() for a in f.readline().lstrip("#").split()]
             df = pd.read_csv(
-                f, names=cols, comment="#", sep=" ", skipinitialspace=True, index_col=False
+                fn, names=cols, comment="#", sep=" ", skipinitialspace=True, index_col=False
             )
-            idx = 1 if not (m := regex.match(f)) else m.group(1)
+            idx = 1 if not (m := regex.match(fn)) else m.group(1)
             kwargs = dict(label=f"mcmc" + (f" #{idx}" if idx else ""), color=f"C{idx}", alpha=0.75)
             axes[i, 0].semilogy(df.N, df.Rminus1, "-o", **kwargs)
             axes[i, 0].set_ylabel(r"$R-1$")

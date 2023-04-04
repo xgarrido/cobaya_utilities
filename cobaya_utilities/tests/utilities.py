@@ -24,7 +24,7 @@ def compare(test, ref, current, msg=""):
             test.assertEqual(len(ref), len(current), "Not same number of objets")
             for i in range(len(ref)):
                 compare(test, ref[i], current[i], msg=msg)
-    elif isinstance(ref, matplotlib.axes._subplots.Axes):
+    elif isinstance(ref, matplotlib.axes._axes.Axes):
         test.assertEqual(len(ref.lines), len(current.lines), "Not same number of Line2D objets")
         for i in range(len(ref.lines)):
             np.testing.assert_almost_equal(ref.lines[i].get_xdata(), current.lines[i].get_xdata())
@@ -81,11 +81,12 @@ def get_reference():
         with open(reference_filename, "wb") as f:
             f.write(requests.get(url).content)
 
-    return pickle.load(open(reference_filename, "rb"))
+    with open(reference_filename, "rb") as f:
+        data_ref = pickle.load(f)
+    return data_ref
 
 
 def generate_chains():
-
     generate_mcmc()
 
     from cobaya_utilities import tools
