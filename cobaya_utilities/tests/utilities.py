@@ -161,3 +161,7 @@ def main():
     generate_chains()
     generate_fisher()
     generate_pickle(data)
+
+
+if __name__ == "__main__":
+    main()
