@@ -135,7 +135,7 @@ all_params = {**cosmo_params, **nuisance_params}
 
 likelihood_name = "mflike.MFLike"
 likelihood_config = {
-    "input_file": "data_sacc_00000.fits",
+    "input_file": "LAT_simu_sacc_00000.fits",
     "cov_Bbl_file": "data_sacc_w_covar_and_Bbl.fits",
 }
 
@@ -161,3 +161,7 @@ def main():
     generate_chains()
     generate_fisher()
     generate_pickle(data)
+
+
+if __name__ == "__main__":
+    main()

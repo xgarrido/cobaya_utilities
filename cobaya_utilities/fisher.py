@@ -208,7 +208,7 @@ def plot_fisher_matrix(matrix=None, use_relplot=True, reset_cache=False, **matri
                 .set_xticklabels(rotation=90)
                 .despine(left=True, bottom=True)
             )
-            for artist in g.legend.legendHandles:
+            for artist in g.legend.legend_handles:
                 artist.set_edgecolor("0.7")
     else:
         mask = np.triu(np.ones_like(matrix, dtype=bool))
