@@ -31,20 +31,20 @@ The easiest way to install the module is
 
 .. code:: shell
 
-    $ pip install [--user] cobaya-utilities
+    pip install [--user] cobaya-utilities
 
 If you plan to made some modifications, to improve or to correct some bugs, then you need to clone
 the following repository
 
 .. code:: shell
 
-    $ git clone https://github.com/xgarrido/cobaya_utilities.git /where/to/clone
+    git clone https://github.com/xgarrido/cobaya_utilities.git /where/to/clone
 
 Then you can install the code and its dependencies *via*
 
 .. code:: shell
 
-    $ pip install -e [--user] /where/to/clone
+    pip install -e [--user] /where/to/clone
 
 
 Running/testing the code
@@ -54,7 +54,7 @@ You can test the ``cobaya_utilities`` module (assuming you have ``pytest`` insta
 
 .. code:: shell
 
-    $ pytest
+    pytest
 
 
 .. end_before_documentation
