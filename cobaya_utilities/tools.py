@@ -94,6 +94,7 @@ def print_chains_size(
     ----------
     mcmc_samples: dict
       a dict holding a name as key for the sample and a corresponding directory as value
+      or a dict configuration
     with_bar: bool
       showing an histogram bar for each cell given the number of mcmc samples
     bar_color: str
@@ -117,6 +118,8 @@ def print_chains_size(
     for irow, (name, value) in enumerate(mcmc_samples.items()):
         path = value
         if isinstance(value, dict):
+            if "label" in value:
+                name = value.get("label")
             if "path" not in value:
                 raise ValueError(f"Missing 'path' value for '{name}' chain!")
             path = value.get("path")
@@ -239,7 +242,7 @@ def print_results(samples, params, labels, limit=1):
     params: list
       a list of parameters.
     labels: list
-      a list of labels to be used a row index.
+      a list of labels to be used as row index.
     limit: int
       the confidence limit of the results (default: 1 i.e. 68%).
     """
@@ -293,7 +296,8 @@ def plot_chains(
         Parameters
         ----------
         mcmc_samples: dict
-          a dict holding a name as key for the sample and a corresponding directory as value.
+          a dict holding a name as key for the sample and a corresponding directory as value
+          or a dict configuration
         params: dict or list
           a dict holding the parameter names for the different mcmc_samples or
           a unique list of parameter names
@@ -336,7 +340,15 @@ def plot_chains(
     markers_args = markers_args or dict(color="0.15", ls="--", lw=1)
     stored_axes = {}
     regex = re.compile(rf".*{prefix}\.([0-9]+).txt")
-    for name, path in mcmc_samples.items():
+    for name, value in mcmc_samples.items():
+        path = value
+        if isinstance(value, dict):
+            if "label" in value:
+                name = value.get("label")
+            if "path" not in value:
+                raise ValueError(f"Missing 'path' value for '{name}' chain!")
+            path = value.get("path")
+
         axes = None
 
         # Loop over files independently
