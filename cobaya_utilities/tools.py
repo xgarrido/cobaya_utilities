@@ -22,7 +22,13 @@ def _get_chain_filenames(path, prefix="mcmc", suffix=".txt"):
 def create_symlink(mcmc_samples, prefix="mcmc"):
     """Create missing files when running chains without mpi support (as it is done in CC in2p3)"""
     regex = re.compile(rf".*{prefix}.*\.([0-9]+.txt)")
-    for name, path in mcmc_samples.items():
+    for name, value in mcmc_samples.items():
+        path = value
+        if isinstance(value, dict):
+            if "path" not in value:
+                raise ValueError(f"Missing 'path' value for '{name}' chain!")
+            path = value.get("path")
+
         if files := _get_chain_filenames(path, prefix=prefix):
             continue
         if not (files := _get_chain_filenames(path, prefix=prefix + ".*", suffix=".txt")):
@@ -39,6 +45,13 @@ def create_symlink(mcmc_samples, prefix="mcmc"):
 
 
 def plot_chains_progress(mcmc_samples):
+    """Plot chain progress
+
+    Parameters
+    ----------
+    mcmc_samples: dict
+      a dict holding a name as key for the sample and a corresponding directory as value
+    """
     r = re.compile(r"\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
     data = []
     for name, path in mcmc_samples.items():
@@ -80,7 +93,7 @@ def print_chains_size(
     Parameters
     ----------
     mcmc_samples: dict
-      a dict holding a name as key for the sample and a corresponding directory as value.
+      a dict holding a name as key for the sample and a corresponding directory as value
     with_bar: bool
       showing an histogram bar for each cell given the number of mcmc samples
     bar_color: str
@@ -101,7 +114,12 @@ def print_chains_size(
 
     found_rminus1 = []
     data = {}
-    for irow, (name, path) in enumerate(mcmc_samples.items()):
+    for irow, (name, value) in enumerate(mcmc_samples.items()):
+        path = value
+        if isinstance(value, dict):
+            if "path" not in value:
+                raise ValueError(f"Missing 'path' value for '{name}' chain!")
+            path = value.get("path")
         files = _get_chain_filenames(path, prefix=prefix, suffix=".log")
         if not files:
             print(f"Missing log files for chains '{name}' within path '{path}'!")
