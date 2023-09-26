@@ -9,17 +9,7 @@ import pandas as pd
 import seaborn as sns
 from scipy import stats
 
-
-@dataclass
-class Sample:
-    path: str
-    label: str
-    color: Optional[str] = None
-
-
-@dataclass
-class SampleCollection:
-    samples: list[Sample] = None
+from .tools import _get_path
 
 
 def set_style(
@@ -151,16 +141,74 @@ def get_default_settings(colors=None, linewidth=2, num_plot_contours=3):
     return plot_settings
 
 
-def get_mc_samples(mcmc_samples, prefix="mcmc", burnin=0.4, no_cache=False):
+def get_mc_samples(
+    mcmc_samples,
+    prefix="mcmc",
+    burnin=0.4,
+    no_cache=False,
+    as_dict=False,
+    selected=None,
+    excluded=None,
+    select_first=None,
+):
+    """Print MCMC sample size given a set of directories
+
+    Parameters
+    ----------
+    mcmc_samples: dict
+      a dict holding a name as key for the sample and a corresponding directory as value
+      or a dict configuration
+    prefix: str
+      filename prefix (default: 'mcmc')
+    burnin: float
+      burning fraction (default: 0.4)
+    no_cache: bool
+      either use or not the pickle cache file
+    as_dict: bool
+      return a dictionnary holding the kwargs to be used in getdist plot
+    selected: list
+      list of selected samples
+    excluded: list
+      list of excluded samples
+    select_fist: str
+      set the name of the first sample to return
+    """
     from getdist.plots import loadMCSamples
 
-    samples = [
-        loadMCSamples(
-            os.path.join(path, prefix), settings={"ignore_rows": burnin}, no_cache=no_cache
-        )
-        for path in mcmc_samples.values()
-    ]
-    return list(mcmc_samples.keys()), samples
+    selected = selected or list(mcmc_samples.keys())
+    excluded = excluded or []
+
+    if isinstance(selected, str):
+        selected = [selected]
+    if isinstance(excluded, str):
+        excluded = [excluded]
+
+    for e in excluded:
+        selected.remove(e)
+
+    if select_first:
+        selected.remove(select_first)
+        selected = [select_first] + selected
+
+    samples, labels, colors = [], [], []
+    for name in selected:
+        value = mcmc_samples[name]
+        path = _get_path(name, value)
+        if isinstance(value, dict):
+            labels += [value.get("label", name)]
+            colors += [value.get("color")]
+        else:
+            labels += [name]
+            colors += [None]
+
+        samples += [
+            loadMCSamples(
+                os.path.join(path, prefix), settings={"ignore_rows": burnin}, no_cache=no_cache
+            )
+        ]
+    if as_dict:
+        return samples, dict(legend_labels=labels, colors=colors, diag1d_kwargs={"colors": colors})
+    return labels, samples, colors
 
 
 def show_inputs(g, inputs, color=None, ls="--"):
