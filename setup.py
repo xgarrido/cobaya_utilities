@@ -29,5 +29,5 @@ setup(
         "Topic :: Scientific/Engineering :: Visualization",
         "Topic :: Education",
     ],
-    install_requires=["cobaya", "seaborn"],
+    install_requires=["cobaya", "seaborn", "tqdm"],
 )
