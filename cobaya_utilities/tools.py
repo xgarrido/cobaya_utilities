@@ -218,17 +218,30 @@ def print_results(samples, params, labels, limit=1):
     params = params if isinstance(params, list) else list(params.keys())
     labels = labels if isinstance(labels, list) else list(labels.keys())
     d, cols = {}, {}
+
+    merge_renames = {}
+    for sample in samples:
+        merge_renames = mergeRenames(
+            sample.getParamNames().getRenames(keep_empty=True), merge_renames
+        )
+    reverse_renames = {vv: [k] for k, v in merge_renames.items() for vv in v}
+
     r = re.compile(r"(.*)(=|<|>)(.*)")
     for param in params:
         for sample in samples:
             latex = None
             sign = ""
             for par in param.split("|"):
-                if sample.getParamNames().hasParam(par):
-                    latex = sample.getInlineLatex(par, limit=limit)
-                    if "<" in latex or ">" in latex:
-                        latex = sample.getInlineLatex(par, limit=2)
+                pars = [par] + merge_renames.get(par, []) + reverse_renames.get(par, [])
+                for p in pars:
+                    if sample.getParamNames().hasParam(p):
+                        latex = sample.getInlineLatex(p, limit=limit)
+                        if "<" in latex or ">" in latex:
+                            latex = sample.getInlineLatex(p, limit=2)
+                        break
+                if latex:
                     break
+
             if not latex:
                 value = " "
             else:
