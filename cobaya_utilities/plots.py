@@ -21,7 +21,7 @@ def set_style(
     use_svg=False,
     use_tex=False,
     print_load_details=False,
-    logging_level=logging.ERROR,
+    logging_level="error",
     **rc,
 ):
     """Set default plot settings
@@ -46,7 +46,7 @@ def set_style(
       overload matplotlib rc parameters
     """
 
-    logging.getLogger("root").setLevel(logging_level)
+    logging.getLogger("root").setLevel(getattr(logging, logging_level.upper(), logging.error))
 
     colors = None
     if palette == "the-lab":
