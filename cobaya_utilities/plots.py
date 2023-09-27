@@ -209,8 +209,10 @@ def get_mc_samples(
             )
         ]
     if as_dict:
-        return samples, dict(legend_labels=labels, colors=colors, diag1d_kwargs={"colors": colors})
-    return labels, samples, colors
+        return dict(
+            roots=samples, legend_labels=labels, colors=colors, diag1d_kwargs={"colors": colors}
+        )
+    return samples, labels, colors
 
 
 def show_inputs(g, inputs, color=None, ls="--"):
