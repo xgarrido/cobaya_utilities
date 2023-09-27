@@ -1,3 +1,4 @@
+import logging
 import os
 from dataclasses import dataclass
 from typing import Optional
@@ -20,6 +21,7 @@ def set_style(
     use_svg=False,
     use_tex=False,
     print_load_details=False,
+    logging_level=logging.ERROR,
     **rc,
 ):
     """Set default plot settings
@@ -43,6 +45,8 @@ def set_style(
     rc: dict
       overload matplotlib rc parameters
     """
+
+    logging.getLogger("root").setLevel(logging_level)
 
     colors = None
     if palette == "the-lab":
