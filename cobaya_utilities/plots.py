@@ -174,7 +174,6 @@ def get_mc_samples(
       set the name of the first sample to return
     """
     from getdist.plots import loadMCSamples
-    from tqdm.auto import tqdm
 
     selected = selected or list(mcmc_samples.keys())
     excluded = excluded or []
@@ -192,8 +191,7 @@ def get_mc_samples(
         selected = [select_first] + selected
 
     samples, labels, colors = [], [], []
-    for name in (pbar := tqdm(selected)):
-        pbar.set_description(f"Loading '{name}'")
+    for name in selected:
         value = mcmc_samples[name]
         path = _get_path(name, value)
         if isinstance(value, dict):
@@ -209,9 +207,7 @@ def get_mc_samples(
             )
         ]
     if as_dict:
-        return dict(
-            roots=samples, legend_labels=labels, colors=colors, diag1d_kwargs={"colors": colors}
-        )
+        return samples, dict(legend_labels=labels, colors=colors, diag1d_kwargs={"colors": colors})
     return samples, labels, colors
 
 
