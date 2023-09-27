@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from getdist.paramnames import mergeRenames
 
 _default_root_path = "../output"
 
@@ -217,17 +218,30 @@ def print_results(samples, params, labels, limit=1):
     params = params if isinstance(params, list) else list(params.keys())
     labels = labels if isinstance(labels, list) else list(labels.keys())
     d, cols = {}, {}
+
+    merge_renames = {}
+    for sample in samples:
+        merge_renames = mergeRenames(
+            sample.getParamNames().getRenames(keep_empty=True), merge_renames
+        )
+    reverse_renames = {vv: [k] for k, v in merge_renames.items() for vv in v}
+
     r = re.compile(r"(.*)(=|<|>)(.*)")
     for param in params:
         for sample in samples:
             latex = None
             sign = ""
             for par in param.split("|"):
-                if sample.getParamNames().hasParam(par):
-                    latex = sample.getInlineLatex(par, limit=limit)
-                    if "<" in latex or ">" in latex:
-                        latex = sample.getInlineLatex(par, limit=2)
+                pars = [par] + merge_renames.get(par, []) + reverse_renames.get(par, [])
+                for p in pars:
+                    if sample.getParamNames().hasParam(p):
+                        latex = sample.getInlineLatex(p, limit=limit)
+                        if "<" in latex or ">" in latex:
+                            latex = sample.getInlineLatex(p, limit=2)
+                        break
+                if latex:
                     break
+
             if not latex:
                 value = " "
             else:
@@ -308,6 +322,7 @@ def plot_chains(
     markers_args = markers_args or dict(color="0.15", ls="--", lw=1)
     stored_axes, color_palettes = {}, {}
     regex = re.compile(rf".*{prefix}\.([0-9]+).txt")
+    merge_renames = {}
     for name, value in mcmc_samples.items():
         path = _get_path(name, value)
         if isinstance(value, dict):
@@ -334,11 +349,16 @@ def plot_chains(
                 sample = sample or loadMCSamples(os.path.join(os.path.dirname(f), prefix), **kwargs)
                 samples = sample.getSeparateChains()[imcmc - 1].samples
 
+            # Add renames
+            merge_renames = mergeRenames(
+                sample.getParamNames().getRenames(keep_empty=True), merge_renames
+            )
             # Get param lookup table
-            lookup = {
-                par.name: dict(pos=i, label=par.label)
-                for i, par in enumerate(sample.getParamNames().names)
-            }
+            lookup = {}
+            for i, par in enumerate(sample.getParamNames().names):
+                lookup[par.name] = dict(pos=i, label=par.label)
+                if renames := merge_renames.get(par.name):
+                    lookup.update({r: lookup[par.name] for r in renames})
 
             if axes is None:
                 # Keep only relevant parameters
