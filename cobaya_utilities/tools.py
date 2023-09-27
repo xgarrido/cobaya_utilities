@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from getdist.paramnames import mergeRenames
 
 _default_root_path = "../output"
 
@@ -308,6 +309,7 @@ def plot_chains(
     markers_args = markers_args or dict(color="0.15", ls="--", lw=1)
     stored_axes, color_palettes = {}, {}
     regex = re.compile(rf".*{prefix}\.([0-9]+).txt")
+    merge_renames = {}
     for name, value in mcmc_samples.items():
         path = _get_path(name, value)
         if isinstance(value, dict):
@@ -334,11 +336,16 @@ def plot_chains(
                 sample = sample or loadMCSamples(os.path.join(os.path.dirname(f), prefix), **kwargs)
                 samples = sample.getSeparateChains()[imcmc - 1].samples
 
+            # Add renames
+            merge_renames = mergeRenames(
+                sample.getParamNames().getRenames(keep_empty=True), merge_renames
+            )
             # Get param lookup table
-            lookup = {
-                par.name: dict(pos=i, label=par.label)
-                for i, par in enumerate(sample.getParamNames().names)
-            }
+            lookup = {}
+            for i, par in enumerate(sample.getParamNames().names):
+                lookup[par.name] = dict(pos=i, label=par.label)
+                if renames := merge_renames.get(par.name):
+                    lookup.update({r: lookup[par.name] for r in renames})
 
             if axes is None:
                 # Keep only relevant parameters
