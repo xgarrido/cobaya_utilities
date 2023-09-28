@@ -21,7 +21,7 @@ def set_style(
     use_svg=False,
     use_tex=False,
     print_load_details=False,
-    logging_level=logging.ERROR,
+    logging_level="error",
     **rc,
 ):
     """Set default plot settings
@@ -46,7 +46,7 @@ def set_style(
       overload matplotlib rc parameters
     """
 
-    logging.getLogger("root").setLevel(logging_level)
+    logging.getLogger("root").setLevel(getattr(logging, logging_level.upper(), logging.error))
 
     colors = None
     if palette == "the-lab":
@@ -150,7 +150,7 @@ def get_mc_samples(
     prefix="mcmc",
     burnin=0.4,
     no_cache=False,
-    as_dict=False,
+    as_dict=True,
     selected=None,
     excluded=None,
     select_first=None,
@@ -178,6 +178,7 @@ def get_mc_samples(
       set the name of the first sample to return
     """
     from getdist.plots import loadMCSamples
+    from tqdm.auto import tqdm
 
     selected = selected or list(mcmc_samples.keys())
     excluded = excluded or []
@@ -194,16 +195,17 @@ def get_mc_samples(
         selected.remove(select_first)
         selected = [select_first] + selected
 
+    default_prefix = prefix
     samples, labels, colors = [], [], []
-    for name in selected:
+    for name in (pbar := tqdm(selected)):
+        pbar.set_description(f"Loading '{name}'")
         value = mcmc_samples[name]
+        if isinstance(value, str):
+            value = dict(path=value)
         path = _get_path(name, value)
-        if isinstance(value, dict):
-            labels += [value.get("label", name)]
-            colors += [value.get("color")]
-        else:
-            labels += [name]
-            colors += [None]
+        prefix = value.get("prefix", default_prefix)
+        labels += [value.get("label", name)]
+        colors += [value.get("color")]
 
         samples += [
             loadMCSamples(
