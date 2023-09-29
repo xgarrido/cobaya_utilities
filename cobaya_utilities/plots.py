@@ -154,6 +154,7 @@ def get_mc_samples(
     selected=None,
     excluded=None,
     select_first=None,
+    no_progress_bar=True,
 ):
     """Print MCMC sample size given a set of directories
 
@@ -176,6 +177,8 @@ def get_mc_samples(
       list of excluded samples
     select_fist: str
       set the name of the first sample to return
+    no_progress_bar: bool
+      either enable or disable progress bar from tqdm
     """
     from getdist.plots import loadMCSamples
     from tqdm.auto import tqdm
@@ -197,7 +200,7 @@ def get_mc_samples(
 
     default_prefix = prefix
     samples, labels, colors = [], [], []
-    for name in (pbar := tqdm(selected)):
+    for name in (pbar := tqdm(selected, disable=no_progress_bar)):
         pbar.set_description(f"Loading '{name}'")
         value = mcmc_samples[name]
         if isinstance(value, str):
