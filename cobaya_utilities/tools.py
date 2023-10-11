@@ -25,7 +25,7 @@ def _get_chain_filenames(path, prefix="mcmc", suffix=".txt"):
 def _get_path(name, value):
     path = value
     if isinstance(value, dict):
-        path = value.get("path", os.path.join(_default_root_path, name))
+        path = value.get("path", os.path.join(_default_root_path, str(name)))
     if not os.path.exists(path):
         raise ValueError(f"'{name} chains can not be located in '{path}'")
     return path
