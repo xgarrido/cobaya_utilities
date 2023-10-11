@@ -209,7 +209,7 @@ def plot_fisher_matrix(matrix=None, use_relplot=True, reset_cache=False, **matri
                 .despine(left=True, bottom=True)
             )
             for artist in g.legend.legend_handles:
-                artist.set_edgecolor("0.7")
+                artist.set(markeredgecolor="0.7", markeredgewidth=1)
     else:
         mask = np.triu(np.ones_like(matrix, dtype=bool))
         sns.heatmap(
