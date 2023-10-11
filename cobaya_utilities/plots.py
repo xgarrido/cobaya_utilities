@@ -1,13 +1,13 @@
 import logging
 import os
-from dataclasses import dataclass
-from typing import Optional
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from getdist import plots
+from getdist.plots import get_subplot_plotter
 from scipy import stats
 
 from .tools import _get_path
@@ -42,6 +42,8 @@ def set_style(
       use LaTeX axis labels
     print_load_details: bool
       print load details when getdist loads samples
+    logging_level: str
+      logging level to be passed to getdist
     rc: dict
       overload matplotlib rc parameters
     """
@@ -145,6 +147,31 @@ def get_default_settings(colors=None, linewidth=2, num_plot_contours=3):
     return plot_settings
 
 
+def triangle_plot(*args, **kwargs):
+    """Overloaded triangle_plot function with additional features"""
+    g = get_subplot_plotter(settings=get_default_settings())
+    g.triangle_plot(*args, **kwargs)
+
+    if kwargs.get("despine", True):
+        despine(g)
+
+    if inputs := kwargs.get("inputs"):
+        show_inputs(g, inputs, color=kwargs.get("input_color", "gray"))
+
+    return g
+
+
+def plots_2d(*args, **kwargs):
+    """Overloaded plot_2d function with additional features"""
+    plotter_options = ["width_inch"]
+    plotter_kwargs = {k: v for k, v in kwargs.items() if k in plotter_options}
+
+    g = get_subplot_plotter(settings=get_default_settings(), **plotter_kwargs)
+    g.plots_2d(*args, **kwargs)
+
+    return g
+
+
 def get_mc_samples(
     mcmc_samples,
     prefix="mcmc",
@@ -180,7 +207,7 @@ def get_mc_samples(
     no_progress_bar: bool
       either enable or disable progress bar from tqdm
     """
-    from getdist.plots import loadMCSamples
+    from getdist import loadMCSamples
     from tqdm.auto import tqdm
 
     selected = selected or list(mcmc_samples.keys())
@@ -212,7 +239,10 @@ def get_mc_samples(
 
         samples += [
             loadMCSamples(
-                os.path.join(path, prefix), settings={"ignore_rows": burnin}, no_cache=no_cache
+                os.path.join(path, prefix),
+                settings={"ignore_rows": burnin},
+                no_cache=no_cache,
+                chain_exclude=value.get("exclude"),
             )
         ]
     if as_dict:
