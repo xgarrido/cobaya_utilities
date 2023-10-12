@@ -161,10 +161,21 @@ def triangle_plot(*args, **kwargs):
     return g
 
 
+def plots_1d(*args, **kwargs):
+    """Overloaded plots_1d function with additional features"""
+    default_plotter_options = {"width_inch": 20}
+    plotter_kwargs = {k: kwargs.get(k, v) for k, v in default_plotter_options.items()}
+
+    g = get_single_plotter(settings=get_default_settings(), **plotter_kwargs)
+    g.plots_1d(*args, **kwargs)
+
+    return g
+
+
 def plots_2d(*args, **kwargs):
-    """Overloaded plot_2d function with additional features"""
-    plotter_options = ["width_inch"]
-    plotter_kwargs = {k: v for k, v in kwargs.items() if k in plotter_options}
+    """Overloaded plots_2d function with additional features"""
+    default_plotter_options = {"width_inch": 20}
+    plotter_kwargs = {k: kwargs.get(k, v) for k, v in default_plotter_options.items()}
 
     g = get_subplot_plotter(settings=get_default_settings(), **plotter_kwargs)
     g.plots_2d(*args, **kwargs)
