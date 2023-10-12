@@ -191,8 +191,9 @@ def plots_2d(*args, **kwargs):
     g = get_subplot_plotter(settings=get_default_settings(), **plotter_kwargs)
     g.plots_2d(*args, **kwargs)
 
-    if kwargs.get("despine", True):
-        despine(g)
+    if titles := kwargs.get("titles"):
+        for title, ax in zip(titles, g.fig.axes):
+            ax.set_title(title)
 
     return g
 
