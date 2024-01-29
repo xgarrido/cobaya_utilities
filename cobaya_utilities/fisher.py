@@ -99,9 +99,11 @@ def compute_fisher_matrix(
             point = defaults.copy()
             point.update(
                 {
-                    param: point[param] * (1 + epsilon)
-                    if point[param] != 0
-                    else point[param] + epsilon
+                    param: (
+                        point[param] * (1 + epsilon)
+                        if point[param] != 0
+                        else point[param] + epsilon
+                    )
                 }
             )
             model.logposterior(point)
