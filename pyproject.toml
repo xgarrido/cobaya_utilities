@@ -32,13 +32,10 @@ profile = "black"
 
 [tool.coverage.run]
 omit = [
-     "cobaya_utilities/tests/*",
-     "cobaya_utilities/plots.py",
-     "cobaya_utilities/_version.py"
+  "cobaya_utilities/tests/*",
+  "cobaya_utilities/plots.py",
+  "cobaya_utilities/_version.py",
 ]
 
 [tool.coverage.report]
-exclude_lines = [
-	"raise LoggedError",
-	"except AttributeError"
-]
+exclude_lines = ["raise LoggedError", "except AttributeError"]

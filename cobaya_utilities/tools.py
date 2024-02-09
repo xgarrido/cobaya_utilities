@@ -186,12 +186,12 @@ def print_chains_size(
         df = pd.DataFrame("", index=x.index, columns=x.columns)
         states = dict(running="#55A868", done="#4C72B0", error="#C44E52")
         for name, (state, color) in product(mcmc_names, states.items()):
-            mask = x.loc[:, (name, "status")] == state
+            mask = x[(name, "status")] == state
             css = f"""color: {color}; text-decoration: {color} underline;
             text-decoration-thickness: 5px; font-weight: {'normal' if state=="running" else 'bold'}"""
-            df.loc[:, (name, "total")][mask] = css
+            df.loc[mask, (name, "total")] = css
             if state == "error":
-                df.loc[:, (name, "rate")][mask] = css
+                df.loc[mask, (name, "rate")] = css
 
         return df
 
