@@ -8,6 +8,7 @@ import pandas as pd
 import seaborn as sns
 from getdist import plots
 from getdist.plots import get_subplot_plotter
+from matplotlib.lines import Line2D
 from scipy import stats
 
 from .tools import _get_path
@@ -120,7 +121,7 @@ def set_style(
         plt.rcParams.update(rc)
 
 
-def get_default_settings(colors=None, linewidth=2, num_plot_contours=3):
+def get_default_settings(colors=None, linewidth=1, num_plot_contours=3):
     """Set default getdist plot settings
 
     Parameters
@@ -156,8 +157,13 @@ def triangle_plot(*args, **kwargs):
     if kwargs.get("despine", True):
         despine(g)
 
-    if inputs := kwargs.get("inputs"):
-        show_inputs(g, inputs, color=kwargs.get("input_color", "gray"))
+    if priors := kwargs.get("priors"):
+        show_priors(
+            g,
+            priors,
+            color=kwargs.get("prior_color", "gray"),
+            with_legend=kwargs.get("prior_legend", True),
+        )
 
     return g
 
@@ -276,20 +282,20 @@ def get_mc_samples(
     return samples, labels, colors
 
 
-def show_inputs(g, inputs, color=None, ls="--"):
-    """Show input/reference values on a given set of axes
+def show_priors(g, priors, color="gray", ls="--", with_legend=True):
+    """Show prior values on a given set of axes
     Parameters
     ----------
     g: getdist.plots
       the getdist plotter instance
-    inputs: dict
+    priors: dict
       dictionary holding loc/scale value for normal distribution
     color: str
       the color name
     ls: str
       the line style
     """
-    for par, val in inputs.items():
+    for par, val in priors.items():
         if not (ax := g.get_axes_for_params(par)):
             continue
         if isinstance(val, float):
@@ -297,7 +303,11 @@ def show_inputs(g, inputs, color=None, ls="--"):
         else:
             x = np.linspace(*ax.get_xlim(), 100)
             y = stats.norm.pdf(x, *val)
-            ax.plot(x, y / y.max(), color=color, ls=ls)
+            ax.plot(
+                x, y / y.max(), color=color, ls=ls, label=rf"${ax.getdist_params[0].label}$ prior"
+            )
+        if with_legend:
+            ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
 
 
 def show_tau_prior(g, loc=0.054, scale=0.0073, color="gray", ls="--"):
@@ -316,15 +326,8 @@ def show_tau_prior(g, loc=0.054, scale=0.0073, color="gray", ls="--"):
     ls: str
       the line style
     """
-    from matplotlib.lines import Line2D
 
     show_inputs(g, inputs=dict(tau=(loc, scale)), color=color, ls=ls)
-    g.get_axes_for_params("tau").legend(
-        [Line2D([0], [0], color=color, ls=ls)],
-        [r"$\tau$ prior"],
-        loc="upper left",
-        bbox_to_anchor=(1, 1),
-    )
 
 
 def despine(g, all_axes=False, **kwargs):
@@ -506,7 +509,6 @@ def plot_mean_distributions(samples, params, colors="0.7", return_results=False,
 
 
 def add_legend(fig=None, ax=None, labels=None, colors=None, ls=None, **kwargs):
-    from matplotlib.lines import Line2D
 
     if not fig and not ax:
         raise ValueError("Missing either fig or axis instance!")
