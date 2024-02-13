@@ -327,7 +327,7 @@ def show_tau_prior(g, loc=0.054, scale=0.0073, color="gray", ls="--"):
       the line style
     """
 
-    show_inputs(g, inputs=dict(tau=(loc, scale)), color=color, ls=ls)
+    show_priors(g, inputs=dict(tau=(loc, scale)), color=color, ls=ls)
 
 
 def despine(g, all_axes=False, **kwargs):
