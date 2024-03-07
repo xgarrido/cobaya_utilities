@@ -61,6 +61,7 @@ def print_chains_size(
     hide_status=True,
     with_gelman_rubin=True,
     prefix="mcmc",
+    mpi_run=True,
 ):
     """Print MCMC sample size given a set of directories
 
@@ -81,6 +82,8 @@ def print_chains_size(
       add Gelman-Rubin metric aka R-1
     prefix: str
       prefix for chain names (default is "mcmc.")
+    mpi_run: bool
+      mpi run flag (default true)
     """
     create_symlink(mcmc_samples, prefix)
     regex_log = re.compile(r".*mcmc\.([0-9]+).log")
@@ -96,7 +99,7 @@ def print_chains_size(
         if not files:
             print(f"Missing log files for chains '{name}' within path '{path}'!")
             return
-        if len(files) == 1:
+        if len(files) == 1 and mpi_run:
             total_steps = {}
             data.setdefault(name, {})
             r = re.compile(
@@ -165,9 +168,8 @@ def print_chains_size(
                         data[name].update({(mcmc_name, "R-1"): f"{float(line.split()[-2]):.2f}"})
                         found_rminus1 += [mcmc_name]
 
-    df = pd.DataFrame.from_dict(data, orient="index").sort_index(
-        level=0, axis=1, sort_remaining=False
-    )
+    df = pd.DataFrame.from_dict(data, orient="index")
+    df.sort_index(level=0, axis=1, sort_remaining=False, inplace=True)
     df.dropna(axis=1, how="all", inplace=True)
 
     mcmc_names = list(df.columns.get_level_values(0).unique())

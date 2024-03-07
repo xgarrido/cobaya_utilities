@@ -60,7 +60,7 @@ def generate_mcmc():
             },
         },
         "sampler": {"mcmc": {"seed": 31415}},
-        "output": f"{data_path}/chains/mcmc",
+        "output": os.path.join(data_path, "chains/mcmc"),
     }
     from cobaya.run import run
 
@@ -94,7 +94,7 @@ def generate_chains():
     data.update(
         {
             "plot_chains": tools.plot_chains(mcmc_samples, params),
-            "print_chains_size": tools.print_chains_size(mcmc_samples).data,
+            "print_chains_size": tools.print_chains_size(mcmc_samples, mpi_run=False).data,
             "plot_progress": tools.plot_progress(mcmc_samples),
             "print_results": tools.print_results(
                 [loadMCSamples(f"{path}/mcmc") for path in mcmc_samples.values()],
