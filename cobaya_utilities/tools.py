@@ -442,6 +442,7 @@ def plot_chains(
             loc="center",
             title=name,
             ncol=len(files),
+            title_fontsize="large",
         )
         # leg._legend_box.align = "center"
         fig.tight_layout()
