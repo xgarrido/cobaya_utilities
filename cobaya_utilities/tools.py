@@ -443,7 +443,7 @@ def plot_chains(
             title=name,
             ncol=len(files),
         )
-        leg._legend_box.align = "left"
+        # leg._legend_box.align = "center"
         fig.tight_layout()
         stored_axes[name] = {p: axes[i] for i, p in enumerate(selected_params)}
 
