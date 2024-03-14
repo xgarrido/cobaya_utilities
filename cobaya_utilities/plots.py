@@ -267,7 +267,7 @@ def get_mc_samples(
         path = _get_path(name, value)
         prefix = value.get("prefix", default_prefix)
         labels += [value.get("label", name)]
-        colors += [value.get("color")]
+        colors += [value.get("color", f"C{selected.index(name)}")]
 
         samples += [
             loadMCSamples(
