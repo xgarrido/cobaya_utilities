@@ -108,15 +108,15 @@ def print_chains_size(
             )
             with open(files[0]) as f:
                 for line in f:
+                    for state, msg in status.items():
+                        if msg in line:
+                            data[name].update({(mcmc_name, "status"): state})
                     found = r.findall(line)
                     if len(found) == 0:
                         continue
                     idx, time, current_steps, accepted_steps = found[0]
                     mcmc_name = f"mcmc {int(idx)+1}"
                     data[name].update({(mcmc_name, "status"): "running"})
-                    for state, msg in status.items():
-                        if msg in line:
-                            data[name].update({(mcmc_name, "status"): state})
 
                     current_steps = int(current_steps)
                     ts = total_steps.setdefault(idx, 0)
@@ -136,13 +136,13 @@ def print_chains_size(
                 data.setdefault(name, {}).update({(mcmc_name, "status"): "running"})
                 with open(fn) as f:
                     for line in f:
+                        for state, msg in status.items():
+                            if msg in line:
+                                data[name].update({(mcmc_name, "status"): state})
                         found = r.findall(line)
                         if len(found) == 0:
                             continue
                         time, current_steps, accepted_steps = found[0]
-                        for state, msg in status.items():
-                            if msg in line:
-                                data[name].update({(mcmc_name, "status"): state})
 
                         current_steps = int(current_steps)
                         total_steps = (
@@ -467,6 +467,8 @@ def plot_progress(mcmc_samples, sharex=True, share_fig=False):
       a dict holding a name as key for the sample and a corresponding directory as value.
     sharex: bool
       share the x-axis between the several plot progress (default: True)
+    share_fig: bool
+      plots are done within the same figure
     """
     nrows = len(mcmc_samples) if not share_fig else 1
     ncols = 2
