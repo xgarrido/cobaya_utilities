@@ -180,8 +180,17 @@ def plots_1d(*args, **kwargs):
     g = get_subplot_plotter(settings=get_default_settings(), **plotter_kwargs)
     g.plots_1d(*args, **kwargs)
 
+    if priors := kwargs.get("priors"):
+        show_priors(
+            g,
+            priors,
+            color=kwargs.get("prior_color", "gray"),
+            with_legend=kwargs.get("prior_legend", True),
+            legend_kwargs=dict(loc="best"),
+        )
+
     if kwargs.get("despine", True):
-        despine(g)
+        despine(g, all_axes=True)
 
     if legend_kwargs:
         g.add_legend(legend_labels, **legend_kwargs)
@@ -282,7 +291,7 @@ def get_mc_samples(
     return samples, labels, colors
 
 
-def show_priors(g, priors, color="gray", ls="--", with_legend=True):
+def show_priors(g, priors, color="gray", ls="--", with_legend=True, legend_kwargs=None):
     """Show prior values on a given set of axes
     Parameters
     ----------
@@ -294,6 +303,10 @@ def show_priors(g, priors, color="gray", ls="--", with_legend=True):
       the color name
     ls: str
       the line style
+    with_legend: bool
+      add legend
+    legend_kwargs: dict
+      set legend kwargs
     """
     for par, val in priors.items():
         if not (ax := g.get_axes_for_params(par)):
@@ -307,7 +320,8 @@ def show_priors(g, priors, color="gray", ls="--", with_legend=True):
                 x, y / y.max(), color=color, ls=ls, label=rf"${ax.getdist_params[0].label}$ prior"
             )
         if with_legend:
-            ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
+            legend_kwargs = legend_kwargs or dict(loc="upper left", bbox_to_anchor=(1, 1))
+            ax.legend(**legend_kwargs)
 
 
 def show_tau_prior(g, loc=0.054, scale=0.0073, color="gray", ls="--"):
@@ -513,6 +527,8 @@ def add_legend(fig=None, ax=None, labels=None, colors=None, ls=None, **kwargs):
     if not fig and not ax:
         raise ValueError("Missing either fig or axis instance!")
 
+    labels = labels or kwargs.get("legend_labels")
+
     colors = colors or [None for label in labels]
     ls = ls or ["-" for label in labels]
     handles = [Line2D([0], [0], color=colors[i], ls=ls[i]) for i, label in enumerate(labels)]
@@ -526,5 +542,38 @@ def add_legend(fig=None, ax=None, labels=None, colors=None, ls=None, **kwargs):
         loc=kwargs.get("loc", "center"),
         title=kwargs.get("title"),
         ncol=kwargs.get("ncol", 1),
+        alignment=kwargs.get("alignment", "left"),
+        fontsize=kwargs.get("fontsize", 15),
     )
-    leg._legend_box.align = "left"
+
+
+def plot_correlation_matrix(samples, params, nx=None, figsize=None):
+    cmap = sns.diverging_palette(230, 20, as_cmap=True)
+    samples = np.atleast_1d(samples)
+
+    ncols = nx or len(samples)
+    nrows = len(samples) // ncols
+    figsize = figsize or 2 * [len(params) // 2]
+    fig, axes = plt.subplots(ncols=ncols, nrows=nrows, figsize=figsize)
+    for ax, sample in zip(np.atleast_2d(axes).flatten(), samples):
+        latex = [rf"${tex}$" for tex in sample.getLatex(params)[0]]
+        corr = sample.corr(params)
+        matrix = pd.DataFrame(data=corr, index=latex, columns=latex)
+
+        mask = np.triu(np.ones_like(matrix, dtype=bool))
+        sns.heatmap(
+            matrix,
+            mask=mask,
+            cmap=cmap,
+            center=0,
+            square=True,
+            linewidths=0.5,
+            cbar_kws={"shrink": 0.5},
+            annot=True,
+            annot_kws={"size": 6},
+            fmt=".2f",
+            vmin=-1,
+            vmax=1,
+            ax=ax,
+            cbar=False,
+        )
