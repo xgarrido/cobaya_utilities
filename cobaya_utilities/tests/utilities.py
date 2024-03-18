@@ -29,6 +29,8 @@ def compare(test, ref, current, msg=""):
         for i in range(len(ref.lines)):
             np.testing.assert_almost_equal(ref.lines[i].get_xdata(), current.lines[i].get_xdata())
             np.testing.assert_almost_equal(ref.lines[i].get_ydata(), current.lines[i].get_ydata())
+    elif isinstance(ref, matplotlib.figure.Figure):
+        compare(test, ref.axes, current.axes, msg=msg)
     elif isinstance(ref, pd.DataFrame):
         pd.testing.assert_frame_equal(ref, current, rtol=0.1)
     else:
