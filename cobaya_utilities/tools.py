@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from getdist.paramnames import mergeRenames
+from matplotlib.lines import Line2D
 
 _default_root_path = "../output"
 
@@ -61,6 +62,7 @@ def print_chains_size(
     hide_status=True,
     with_gelman_rubin=True,
     prefix="mcmc",
+    mpi_run=True,
 ):
     """Print MCMC sample size given a set of directories
 
@@ -81,14 +83,16 @@ def print_chains_size(
       add Gelman-Rubin metric aka R-1
     prefix: str
       prefix for chain names (default is "mcmc.")
+    mpi_run: bool
+      mpi run flag (default true)
     """
     create_symlink(mcmc_samples, prefix)
-    r = re.compile(r"\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
     regex_log = re.compile(r".*mcmc\.([0-9]+).log")
     regex_progress = re.compile(r".*mcmc\.([0-9]+).progress")
 
     found_rminus1 = []
     data = {}
+    status = dict(done="mcmc] The run has converged!", error="mcmc] *ERROR*")
     for irow, (name, value) in enumerate(mcmc_samples.items()):
         path = _get_path(name, value)
         name = value.get("label", name) if isinstance(value, dict) else name
@@ -96,48 +100,77 @@ def print_chains_size(
         if not files:
             print(f"Missing log files for chains '{name}' within path '{path}'!")
             return
-        for fn in sorted(files):
-            total_steps = 0
-            idx = 1 if not (m := regex_log.match(fn)) else m.group(1)
-            mcmc_name = f"mcmc {idx}"
-            status = dict(done="[mcmc] The run has converged!", error="[mcmc] *ERROR*")
-            data.setdefault(name, {}).update({(mcmc_name, "status"): "running"})
-            with open(fn) as f:
+        if len(files) == 1 and mpi_run:
+            total_steps = {}
+            data.setdefault(name, {})
+            r = re.compile(
+                r"\[(.*) : mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted."
+            )
+            with open(files[0]) as f:
                 for line in f:
                     for state, msg in status.items():
                         if msg in line:
                             data[name].update({(mcmc_name, "status"): state})
-
                     found = r.findall(line)
                     if len(found) == 0:
                         continue
-                    time, current_steps, accepted_steps = found[0]
+                    idx, time, current_steps, accepted_steps = found[0]
+                    mcmc_name = f"mcmc {int(idx)+1}"
+                    data[name].update({(mcmc_name, "status"): "running"})
+
                     current_steps = int(current_steps)
-                    total_steps = (
-                        current_steps
-                        if current_steps > total_steps
-                        else total_steps + current_steps
-                    )
-            accepted_steps = int(accepted_steps)
-            rate = accepted_steps / total_steps
-            for field, content in zip(
-                ["accept.", "total", "rate", "R-1"], [accepted_steps, total_steps, rate, None]
-            ):
-                data[name].update({(mcmc_name, field): content})
-        if with_gelman_rubin:
-            files = _get_chain_filenames(path, suffix=".progress")
+                    ts = total_steps.setdefault(idx, 0)
+                    total_steps[idx] = current_steps if current_steps > ts else ts + current_steps
+                    accepted_steps = int(accepted_steps)
+                    rate = accepted_steps / total_steps[idx] if total_steps[idx] != 0 else None
+                    data[name].update({(mcmc_name, "R-1"): None})
+                    data[name].update({(mcmc_name, "accept."): accepted_steps})
+                    data[name].update({(mcmc_name, "total"): total_steps[idx]})
+                    data[name].update({(mcmc_name, "rate"): rate})
+        else:
+            r = re.compile(r"\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
             for fn in sorted(files):
-                idx = 1 if not (m := regex_progress.match(fn)) else m.group(1)
+                total_steps = 0
+                idx = 1 if not (m := regex_log.match(fn)) else m.group(1)
                 mcmc_name = f"mcmc {idx}"
+                data.setdefault(name, {}).update({(mcmc_name, "status"): "running"})
                 with open(fn) as f:
                     for line in f:
-                        pass
-                    if line.startswith("#"):
-                        continue
-                    data[name].update({(mcmc_name, "R-1"): f"{float(line.split()[-2]):.2f}"})
-                    found_rminus1 += [mcmc_name]
+                        for state, msg in status.items():
+                            if msg in line:
+                                data[name].update({(mcmc_name, "status"): state})
+                        found = r.findall(line)
+                        if len(found) == 0:
+                            continue
+                        time, current_steps, accepted_steps = found[0]
+
+                        current_steps = int(current_steps)
+                        total_steps = (
+                            current_steps
+                            if current_steps > total_steps
+                            else total_steps + current_steps
+                        )
+                accepted_steps = int(accepted_steps)
+                rate = accepted_steps / total_steps
+                for field, content in zip(
+                    ["R-1", "accept.", "total", "rate"], [None, accepted_steps, total_steps, rate]
+                ):
+                    data[name].update({(mcmc_name, field): content})
+            if with_gelman_rubin:
+                files = _get_chain_filenames(path, suffix=".progress")
+                for fn in sorted(files):
+                    idx = 1 if not (m := regex_progress.match(fn)) else m.group(1)
+                    mcmc_name = f"mcmc {idx}"
+                    with open(fn) as f:
+                        for line in f:
+                            pass
+                        if line.startswith("#"):
+                            continue
+                        data[name].update({(mcmc_name, "R-1"): f"{float(line.split()[-2]):.2f}"})
+                        found_rminus1 += [mcmc_name]
 
     df = pd.DataFrame.from_dict(data, orient="index")
+    df.sort_index(level=0, axis=1, sort_remaining=False, inplace=True)
     df.dropna(axis=1, how="all", inplace=True)
 
     mcmc_names = list(df.columns.get_level_values(0).unique())
@@ -271,6 +304,8 @@ def plot_chains(
     no_cache=False,
     markers=None,
     markers_args=None,
+    priors=None,
+    priors_args=None,
     prefix="mcmc",
 ):
     """Plot MCMC sample evolution
@@ -304,7 +339,6 @@ def plot_chains(
     """
     create_symlink(mcmc_samples, prefix)
     from getdist import loadMCSamples
-    from matplotlib.lines import Line2D
 
     if not isinstance(params, (list, dict)):
         raise ValueError("Parameter list must be either a list or a dict!")
@@ -320,6 +354,8 @@ def plot_chains(
 
     markers = markers or {}
     markers_args = markers_args or dict(color="0.15", ls="--", lw=1)
+    priors = priors or {}
+    priors_args = priors_args or dict(color="0.75")
     stored_axes, color_palettes = {}, {}
     regex = re.compile(rf".*{prefix}\.([0-9]+).txt")
     merge_renames = {}
@@ -368,10 +404,10 @@ def plot_chains(
                 else:
                     nrow = len(selected_params) // ncol
                     nrow += 1 if len(selected_params) > nrow * ncol else 0
-                fig, axes = plt.subplots(nrow, ncol, sharex=True, figsize=(15, 2 * nrow))
+                fig, axes = plt.subplots(nrow, ncol, sharex=True, figsize=(16, 2 * nrow))
                 axes = axes.flatten()
 
-            color = f"C{imcmc}"
+            color = f"C{int(imcmc)-1}"
             # if color_name:
             #     if color_name not in color_palettes:
             #         color_palettes[color_name] = sns.blend_palette(
@@ -390,6 +426,9 @@ def plot_chains(
                     axes[i].plot(x[: idx_burnin + 1], y[: idx_burnin + 1], alpha=0.25, color=color)
                 if p in markers:
                     axes[i].axhline(markers[p], **markers_args)
+                if prior := priors.get(p):
+                    mu, sigma = prior
+                    axes[i].axhspan(mu - sigma, mu + sigma, **priors_args)
                 chains.setdefault(p, []).append(y)
 
         if show_mean_std:
@@ -403,21 +442,23 @@ def plot_chains(
         # Remove axes with no data inside
         _ = [fig.delaxes(ax) for ax in axes if not len(ax.get_lines())]
         leg = fig.legend(
-            [Line2D([0], [0], color=f"C{f.split('.')[-2]}") for f in files],
+            [Line2D([0], [0], color=f"C{int(f.split('.')[-2])-1}") for f in files],
             [f"mcmc #{f.split('.')[-2]}" for f in files],
-            bbox_to_anchor=(1.0, 0.5 if nrow > 1 else 1.0),
+            bbox_to_anchor=(0.5, 1.025),
             labelcolor="linecolor",
-            loc="center left",
+            loc="center",
             title=name,
+            ncol=len(files),
+            title_fontsize="large",
         )
-        leg._legend_box.align = "left"
+        # leg._legend_box.align = "center"
         fig.tight_layout()
         stored_axes[name] = {p: axes[i] for i, p in enumerate(selected_params)}
 
     return stored_axes
 
 
-def plot_progress(mcmc_samples, sharex=True):
+def plot_progress(mcmc_samples, sharex=True, share_fig=False):
     """Plot Gelman R-1 parameter and acceptance rate
 
     Parameters
@@ -426,8 +467,10 @@ def plot_progress(mcmc_samples, sharex=True):
       a dict holding a name as key for the sample and a corresponding directory as value.
     sharex: bool
       share the x-axis between the several plot progress (default: True)
+    share_fig: bool
+      plots are done within the same figure
     """
-    nrows = len(mcmc_samples)
+    nrows = len(mcmc_samples) if not share_fig else 1
     ncols = 2
     fig, axes = plt.subplots(nrows, ncols, figsize=(15, 3 * nrows), sharex=sharex)
     axes = np.atleast_2d(axes)
@@ -439,28 +482,46 @@ def plot_progress(mcmc_samples, sharex=True):
             name = value.get("label", name)
 
         files = _get_chain_filenames(path, suffix=".progress")
-        is_empty = True
         for fn in files:
             with open(fn) as f:
                 cols = [a.strip() for a in f.readline().lstrip("#").split()]
             df = pd.read_csv(
                 fn, names=cols, comment="#", sep=" ", skipinitialspace=True, index_col=False
             )
-            is_empty &= len(df) == 0
-            idx = 1 if not (m := regex.match(fn)) else m.group(1)
-            kwargs = dict(label=f"mcmc" + (f" #{idx}" if idx else ""), color=f"C{idx}", alpha=0.75)
-            axes[i, 0].semilogy(df.N, df.Rminus1, "-o", **kwargs)
-            axes[i, 0].set_ylabel(r"$R-1$")
+            if df.N.empty:
+                continue
 
-            axes[i, 1].plot(df.N, df.acceptance_rate, "-o", **kwargs)
-            axes[i, 1].set_ylabel(r"acceptance rate")
-        if is_empty:
-            fig.delaxes(axes[i, 0])
-            fig.delaxes(axes[i, 1])
+            idx = 1 if not (m := regex.match(fn)) else m.group(1)
+            color = f"C{int(idx)-1}" if not share_fig else f"C{i}"
+            kwargs = dict(label=f"mcmc" + (f" #{idx}" if idx else ""), color=color, alpha=0.75)
+            ix = i if not share_fig else 0
+            axes[ix, 0].semilogy(df.N, df.Rminus1, "-o", **kwargs)
+            axes[ix, 0].set_ylabel(r"$R-1$")
+
+            axes[ix, 1].plot(df.N, df.acceptance_rate, "-o", **kwargs)
+            axes[ix, 1].set_ylabel(r"acceptance rate")
         if len(files) > 1:
             leg = axes[i, 1].legend(
-                title=name, bbox_to_anchor=(1, 1), loc="upper left", labelcolor="linecolor"
+                title=name,
+                bbox_to_anchor=(1, 1),
+                loc="upper left",
+                labelcolor="linecolor",
+                alignment="left",
             )
-            leg._legend_box.align = "left"
-    plt.tight_layout()
-    return axes
+    if share_fig:
+        leg = fig.legend(
+            [Line2D([0], [0], color=f"C{i}") for i, _ in enumerate(mcmc_samples)],
+            mcmc_samples,
+            bbox_to_anchor=(1, 1),
+            labelcolor="linecolor",
+            loc="center left",
+        )
+    fig.tight_layout()
+
+    for i in range(nrows):
+        if not axes[i, 0].lines:
+            fig.delaxes(axes[i, 0])
+            fig.delaxes(axes[i, 1])
+    if not fig.axes:
+        plt.close(fig)
+    return fig

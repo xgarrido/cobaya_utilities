@@ -16,7 +16,11 @@ class ToolsTest(unittest.TestCase):
         compare(self, self.ref.get("plot_chains"), tools.plot_chains(mcmc_samples, params))
 
     def test_print_chains_size(self):
-        compare(self, self.ref.get("print_chains_size"), tools.print_chains_size(mcmc_samples).data)
+        compare(
+            self,
+            self.ref.get("print_chains_size"),
+            tools.print_chains_size(mcmc_samples, mpi_run=False).data,
+        )
 
     def test_plot_progress(self):
         compare(self, self.ref.get("plot_progress"), tools.plot_progress(mcmc_samples))

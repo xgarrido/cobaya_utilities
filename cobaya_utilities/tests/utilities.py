@@ -29,6 +29,8 @@ def compare(test, ref, current, msg=""):
         for i in range(len(ref.lines)):
             np.testing.assert_almost_equal(ref.lines[i].get_xdata(), current.lines[i].get_xdata())
             np.testing.assert_almost_equal(ref.lines[i].get_ydata(), current.lines[i].get_ydata())
+    elif isinstance(ref, matplotlib.figure.Figure):
+        compare(test, ref.axes, current.axes, msg=msg)
     elif isinstance(ref, pd.DataFrame):
         pd.testing.assert_frame_equal(ref, current, rtol=0.1)
     else:
@@ -60,7 +62,7 @@ def generate_mcmc():
             },
         },
         "sampler": {"mcmc": {"seed": 31415}},
-        "output": f"{data_path}/chains/mcmc",
+        "output": os.path.join(data_path, "chains/mcmc"),
     }
     from cobaya.run import run
 
@@ -94,7 +96,7 @@ def generate_chains():
     data.update(
         {
             "plot_chains": tools.plot_chains(mcmc_samples, params),
-            "print_chains_size": tools.print_chains_size(mcmc_samples).data,
+            "print_chains_size": tools.print_chains_size(mcmc_samples, mpi_run=False).data,
             "plot_progress": tools.plot_progress(mcmc_samples),
             "print_results": tools.print_results(
                 [loadMCSamples(f"{path}/mcmc") for path in mcmc_samples.values()],
