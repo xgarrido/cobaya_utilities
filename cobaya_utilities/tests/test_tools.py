@@ -37,3 +37,7 @@ class ToolsTest(unittest.TestCase):
                 labels=mcmc_samples,
             ),
         )
+
+    def test_get_sampled_parameters(self):
+        df, sampled_params = tools.get_sampled_parameters(mcmc_samples, return_params=True)
+        self.assertDictEqual({"Unit test": ["a", "b"]}, sampled_params)
