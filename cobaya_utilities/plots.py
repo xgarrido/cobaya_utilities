@@ -23,6 +23,7 @@ def set_style(
     use_tex=False,
     print_load_details=False,
     logging_level="error",
+    backend="inline",
     **rc,
 ):
     """Set default plot settings
@@ -45,6 +46,8 @@ def set_style(
       print load details when getdist loads samples
     logging_level: str
       logging level to be passed to getdist
+    backend: str
+      matplotlib backend (default: inline)
     rc: dict
       overload matplotlib rc parameters
     """
@@ -119,6 +122,9 @@ def set_style(
         sns.set_theme(rc=rc, style=seaborn_style, context=None if use_tex else seaborn_context)
     else:
         plt.rcParams.update(rc)
+
+    # Fix for jupyter hub @ NERSC
+    get_ipython().run_line_magic("matplotlib", backend)
 
 
 def get_default_settings(colors=None, linewidth=1, num_plot_contours=3):
