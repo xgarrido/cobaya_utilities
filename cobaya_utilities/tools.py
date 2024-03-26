@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from cobaya.yaml import yaml_load_file
 from getdist.paramnames import mergeRenames
 from matplotlib.lines import Line2D
 
@@ -525,3 +526,61 @@ def plot_progress(mcmc_samples, sharex=True, share_fig=False):
     if not fig.axes:
         plt.close(fig)
     return fig
+
+
+def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False):
+    """Print MCMC sampled parameters
+
+    Parameters
+    ----------
+    mcmc_samples: dict
+      a dict holding a name as key for the sample and a corresponding directory as value
+      or a dict configuration
+    prefix: str
+      prefix for chain names (default is "mcmc.")
+    return_params: bool
+      return dict of params for each MCMC chain (default false)
+    """
+
+    create_symlink(mcmc_samples, prefix)
+    r1 = re.compile(r".*mcmc\] \*.*: (.*)")
+    r2 = re.compile(r".*model\].*Input: (.*)")
+
+    sampled_params = {}
+    latex_table = {}
+    for name, value in mcmc_samples.items():
+        path = _get_path(name, value)
+        name = value.get("label", name) if isinstance(value, dict) else name
+        files = _get_chain_filenames(path, prefix=prefix, suffix=".log")
+        if not files:
+            print(f"Missing log files for chains '{name}' within path '{path}'!")
+            return
+
+        with open(files[0]) as f:
+            for line in f:
+                found = r1.findall(line) or r2.findall(line)
+                if len(found) == 0:
+                    continue
+                params = found[0]
+                sampled_params.setdefault(name, []).extend(eval(params))
+                if "Sampling!" in line:
+                    break
+
+        updated_yaml = yaml_load_file(os.path.join(path, f"{prefix}.updated.yaml"))
+        # To convert latex symbol to mathml
+        # from latex2mathml.converter import convert
+        # par: convert(rf"{meta.get('latex', par)}")
+        latex_table |= {
+            par: rf"${meta.get('latex', par)}$"
+            for par, meta in updated_yaml.get("params", {}).items()
+        }
+
+    df = (
+        pd.DataFrame.from_dict(sampled_params, orient="index")
+        .T.fillna("")
+        .map(lambda x: latex_table.get(x, ""))
+    )
+    dfs = df.style.set_properties(width="150px")
+    if return_params:
+        return dfs, sampled_params
+    return dfs
