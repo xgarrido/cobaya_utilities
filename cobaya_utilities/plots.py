@@ -320,7 +320,7 @@ def show_results(g, results, with_legend=True, legend_kwargs=None):
             with_legend=False,
         )
     kwargs = dict(
-        ax=g.fig.axes[-1],
+        obj=g.fig.axes[-1],
         labels=results.keys(),
         colors=[v.get("color") for v in results.values()],
         fontsize=10,
