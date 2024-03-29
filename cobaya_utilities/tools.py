@@ -547,7 +547,6 @@ def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False):
     r2 = re.compile(r".*model\].*Input: (.*)")
 
     sampled_params = {}
-    latex_table = {}
     for name, value in mcmc_samples.items():
         path = _get_path(name, value)
         name = value.get("label", name) if isinstance(value, dict) else name
@@ -556,31 +555,28 @@ def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False):
             print(f"Missing log files for chains '{name}' within path '{path}'!")
             return
 
+        updated_yaml = yaml_load_file(os.path.join(path, f"{prefix}.updated.yaml"))
+        # To convert latex symbol to mathml
+        # from latex2mathml.converter import convert
+        # par: convert(rf"{meta.get('latex', par)}")
+        latex_table = {
+            par: rf"${meta.get('latex', par)}$"
+            for par, meta in updated_yaml.get("params", {}).items()
+        }
         with open(files[0]) as f:
             for line in f:
                 found = r1.findall(line) or r2.findall(line)
                 if len(found) == 0:
                     continue
-                params = found[0]
-                sampled_params.setdefault(name, []).extend(eval(params))
+                params = eval(found[0])
+                sampled_params.setdefault(name, []).extend(
+                    [latex_table.get(par, par) for par in params]
+                )
                 if "Sampling!" in line:
                     break
 
-        updated_yaml = yaml_load_file(os.path.join(path, f"{prefix}.updated.yaml"))
-        # To convert latex symbol to mathml
-        # from latex2mathml.converter import convert
-        # par: convert(rf"{meta.get('latex', par)}")
-        latex_table |= {
-            par: rf"${meta.get('latex', par)}$"
-            for par, meta in updated_yaml.get("params", {}).items()
-        }
-
-    df = (
-        pd.DataFrame.from_dict(sampled_params, orient="index")
-        .T.fillna("")
-        .map(lambda x: latex_table.get(x, ""))
-    )
-    dfs = df.style.set_properties(width="150px")
+    df = pd.DataFrame.from_dict(sampled_params, orient="index").T.fillna("")
+    df = df.style.set_properties(width="150px")
     if return_params:
-        return dfs, sampled_params
-    return dfs
+        return df, sampled_params
+    return df
