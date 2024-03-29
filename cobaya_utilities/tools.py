@@ -546,6 +546,7 @@ def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False):
     r1 = re.compile(r".*mcmc\] \*.*: (.*)")
     r2 = re.compile(r".*model\].*Input: (.*)")
 
+    latex_params = {}
     sampled_params = {}
     for name, value in mcmc_samples.items():
         path = _get_path(name, value)
@@ -569,13 +570,14 @@ def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False):
                 if len(found) == 0:
                     continue
                 params = eval(found[0])
-                sampled_params.setdefault(name, []).extend(
+                sampled_params.setdefault(name, []).extend(params)
+                latex_params.setdefault(name, []).extend(
                     [latex_table.get(par, par) for par in params]
                 )
                 if "Sampling!" in line:
                     break
 
-    df = pd.DataFrame.from_dict(sampled_params, orient="index").T.fillna("")
+    df = pd.DataFrame.from_dict(latex_params, orient="index").T.fillna("")
     df = df.style.set_properties(width="150px")
     if return_params:
         return df, sampled_params
