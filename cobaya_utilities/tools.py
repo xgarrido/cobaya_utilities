@@ -528,7 +528,7 @@ def plot_progress(mcmc_samples, sharex=True, share_fig=False):
     return fig
 
 
-def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False):
+def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False, column_width="150px"):
     """Print MCMC sampled parameters
 
     Parameters
@@ -540,6 +540,8 @@ def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False):
       prefix for chain names (default is "mcmc.")
     return_params: bool
       return dict of params for each MCMC chain (default false)
+    column_width: str
+      the column width of the output dataframe (default: 150px)
     """
 
     create_symlink(mcmc_samples, prefix)
@@ -578,7 +580,7 @@ def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False):
                     break
 
     df = pd.DataFrame.from_dict(latex_params, orient="index").T.fillna("")
-    df = df.style.set_properties(width="150px")
+    df = df.style.set_properties(width=column_width)
     if return_params:
         return df, sampled_params
     return df
