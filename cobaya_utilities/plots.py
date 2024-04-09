@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -11,7 +12,7 @@ from getdist.plots import get_subplot_plotter
 from matplotlib.lines import Line2D
 from scipy import stats
 
-from .tools import _get_path
+from .tools import _get_chain_filenames, _get_path
 
 
 def set_style(
@@ -151,6 +152,7 @@ def get_default_settings(colors=None, linewidth=1, num_plot_contours=3):
     plot_settings.linewidth = linewidth
     plot_settings.legend_fontsize = 15
     plot_settings.legend_colored_text = True
+    plot_settings.figure_legend_loc = "best"
     plot_settings.scaling = False
     return plot_settings
 
@@ -192,7 +194,7 @@ def plots_1d(*args, **kwargs):
             priors,
             color=kwargs.get("prior_color", "gray"),
             with_legend=kwargs.get("prior_legend", True),
-            legend_kwargs=dict(loc="best"),
+            legend_kwargs=dict(loc=kwargs.get("prior_legend_loc", "upper right")),
         )
 
     if kwargs.get("despine", True):
@@ -229,6 +231,7 @@ def get_mc_samples(
     excluded=None,
     select_first=None,
     no_progress_bar=True,
+    Rminus1_max_value=None,
 ):
     """Print MCMC sample size given a set of directories
 
@@ -253,6 +256,8 @@ def get_mc_samples(
       set the name of the first sample to return
     no_progress_bar: bool
       either enable or disable progress bar from tqdm
+    Rminus1_max_value: float
+      the maximal accepted R-1 value
     """
     from getdist import loadMCSamples
     from tqdm.auto import tqdm
@@ -274,6 +279,8 @@ def get_mc_samples(
 
     default_prefix = prefix
     samples, labels, colors = [], [], []
+    regex = re.compile(r".*mcmc\.([0-9]+).progress")
+
     for name in (pbar := tqdm(selected, disable=no_progress_bar)):
         pbar.set_description(f"Loading '{name}'")
         value = mcmc_samples[name]
@@ -283,15 +290,32 @@ def get_mc_samples(
         prefix = value.get("prefix", default_prefix)
         labels += [value.get("label", name)]
         colors += [value.get("color", f"C{selected.index(name)}")]
-
-        samples += [
-            loadMCSamples(
-                os.path.join(path, prefix),
-                settings={"ignore_rows": burnin},
-                no_cache=no_cache,
-                chain_exclude=value.get("exclude"),
-            )
-        ]
+        if Rminus1_max_value:
+            exclude = []
+            files = _get_chain_filenames(path, prefix, suffix=".progress")
+            for fn in files:
+                idx = 1 if not (m := regex.match(fn)) else int(m.group(1))
+                with open(fn) as f:
+                    cols = [a.strip() for a in f.readline().lstrip("#").split()]
+                df = pd.read_csv(
+                    fn, names=cols, comment="#", sep=" ", skipinitialspace=True, index_col=False
+                )
+                if df.N.empty:
+                    exclude += [idx]
+                elif df.Rminus1.iloc[-1] > Rminus1_max_value:
+                    exclude += [idx]
+                value.update(exclude=exclude)
+        try:
+            samples += [
+                loadMCSamples(
+                    os.path.join(path, prefix),
+                    settings={"ignore_rows": burnin},
+                    no_cache=no_cache,
+                    chain_exclude=value.get("exclude"),
+                )
+            ]
+        except OSError:
+            print(f"WANRING: No chains of {name} found or fulfill the requirement!")
     if as_dict:
         return samples, dict(legend_labels=labels, colors=colors, diag1d_kwargs={"colors": colors})
     return samples, labels, colors
@@ -332,7 +356,9 @@ def show_results(g, results, with_legend=True, legend_kwargs=None):
         add_legend(**kwargs)
 
 
-def show_priors(g, priors, color="gray", ls="--", with_legend=True, legend_kwargs=None):
+def show_priors(
+    g, priors, color="gray", ls="--", with_label=False, with_legend=True, legend_kwargs=None
+):
     """Show prior values on a given set of axes
     Parameters
     ----------
@@ -344,6 +370,8 @@ def show_priors(g, priors, color="gray", ls="--", with_legend=True, legend_kwarg
       the color name
     ls: str
       the line style
+    with_label: bool
+      append parameter name to the legend (default: False)
     with_legend: bool
       add legend
     legend_kwargs: dict
@@ -352,17 +380,16 @@ def show_priors(g, priors, color="gray", ls="--", with_legend=True, legend_kwarg
     for par, val in priors.items():
         if not (ax := g.get_axes_for_params(par)):
             continue
+        label = rf"${ax.getdist_params[0].label}$ prior" if with_label else "prior"
         if isinstance(val, float):
             ax.axvline(val, color=color, ls=ls)
         else:
             x = np.linspace(*ax.get_xlim(), 100)
             y = stats.norm.pdf(x, *val)
-            ax.plot(
-                x, y / y.max(), color=color, ls=ls, label=rf"${ax.getdist_params[0].label}$ prior"
-            )
+            ax.plot(x, y / y.max(), color=color, ls=ls, label=label)
         if with_legend:
             legend_kwargs = legend_kwargs or dict(loc="upper left", bbox_to_anchor=(1, 1))
-            ax.legend(**legend_kwargs)
+            ax.legend(labelcolor="linecolor", **legend_kwargs)
 
 
 def show_tau_prior(g, loc=0.054, scale=0.0073, color="gray", ls="--"):
@@ -402,7 +429,9 @@ def despine(g, all_axes=False, **kwargs):
         sns.despine(ax=g.subplots[0, 0], **kwargs)
 
 
-def plot_mean_values(samples, params, colors=None, palette=None, labels=None, figsize=None):
+def plot_mean_values(
+    samples, params, colors=None, palette=None, labels=None, figsize=None, **kwargs
+):
     """Plot mean and sigma values from posterior distributions
 
     Parameters
@@ -474,6 +503,7 @@ def plot_mean_values(samples, params, colors=None, palette=None, labels=None, fi
             axes[j].set_title(f"$P(\chi^2)$ = {pvalue:.3f}", fontsize=10)
 
     # Add labels
+    labels = labels or kwargs.get("legend_labels")
     if labels is not None:
         ax = axes[0]
         for i, label in enumerate(labels):
@@ -500,7 +530,9 @@ def plot_mean_values(samples, params, colors=None, palette=None, labels=None, fi
         )
 
 
-def plot_mean_distributions(samples, params, colors="0.7", return_results=False, nx=None):
+def plot_mean_distributions(
+    samples, params, priors=None, colors="0.7", return_results=False, nx=None
+):
     """Plot mean KDE distributions
 
     Parameters
@@ -523,9 +555,10 @@ def plot_mean_distributions(samples, params, colors="0.7", return_results=False,
     g.settings.line_styles = (
         nsamples * ["-" + colors] if isinstance(colors, str) else ["-" + color for color in colors]
     )
-    nx = nx or nsamples
+    nx = nx or len(params)
     g.plots_1d(samples, params, nx=nx, legend_labels=[], lws=2)
 
+    priors = priors or {}
     results = {}
     axes = g.subplots.flatten()
     for i, name in enumerate(params):
@@ -539,25 +572,37 @@ def plot_mean_distributions(samples, params, colors="0.7", return_results=False,
             means[j], sigmas[j] = par.mean, par.err
         mu = np.average(means, weights=1 / sigmas**2)
         sigma = np.mean(sigmas)
-        x = np.linspace(*ax.get_xlim(), 1000)
+        sigma = np.std(means)
+        x = np.linspace(*ax.get_xlim(), 100)
         y = stats.norm.pdf(x, mu, sigma)
         ax.plot(x, y / y.max(), color="black", lw=2.5)
-        if params.get(name) is not None:
-            param = params.get(name)
+        if (param := params.get(name)) is not None:
             if isinstance(param, (tuple, list)):
                 y = stats.norm.pdf(x, *param)
                 ax.plot(x, y / y.max(), color="black", ls="--", lw=2.5)
             else:
                 ax.axvline(param, color="red", lw=3)
-            legend = ax.legend([], loc="upper right")
-            legend.set_title(
-                r"$\frac{{{:.1f}\,\sigma}}{{\sqrt{{N_{{\rm sim}}}}}}$".format(
+            labels, handles = [], []
+            if priors.get(name):
+                labels = [rf"prior"]
+                handles = [Line2D([0], [0], color="blue", ls="--")]
+
+            legend = ax.legend(
+                handles,
+                labels,
+                labelcolor="linecolor",
+                bbox_to_anchor=(1, 1),
+                loc="upper center",
+                title=r"$\frac{{{:.1f}\,\sigma}}{{\sqrt{{N_{{\rm sim}}}}}}$".format(
                     (mu - param) / sigma * np.sqrt(nsamples)
                 ),
-                prop={"size": 16},
+                title_fontsize=16,
             )
         results[ax.get_xlabel()] = {"value rec.": mu, "$\sigma$ rec.": sigma}
         ax.spines.left.set_visible(False)
+
+    if priors:
+        show_priors(g, priors, color="blue", with_legend=False)
 
     if return_results:
         return pd.DataFrame.from_dict(results, orient="index")

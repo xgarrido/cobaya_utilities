@@ -152,7 +152,7 @@ def print_chains_size(
                             else total_steps + current_steps
                         )
                 accepted_steps = int(accepted_steps)
-                rate = accepted_steps / total_steps
+                rate = accepted_steps / total_steps if total_steps != 0 else None
                 for field, content in zip(
                     ["R-1", "accept.", "total", "rate"], [None, accepted_steps, total_steps, rate]
                 ):
@@ -235,7 +235,7 @@ def print_chains_size(
     return s
 
 
-def print_results(samples, params, labels, limit=1):
+def print_results(samples, params, labels=None, limit=1, **kwargs):
     """Print results given a set of MCMC samples and a list of parameters
 
     Parameters
@@ -250,6 +250,7 @@ def print_results(samples, params, labels, limit=1):
       the confidence limit of the results (default: 1 i.e. 68%).
     """
     params = params if isinstance(params, list) else list(params.keys())
+    labels = labels or kwargs.get("legend_labels")
     labels = labels if isinstance(labels, list) else list(labels.keys())
     d, cols = {}, {}
 
@@ -325,8 +326,8 @@ def plot_chains(
           the fraction of samples to highlight (below the burnin value, the color is faded)
         ignore_rows: float
           the fraction of samples to ignore
-        show_mean_std: bool
-          show the mean/std values over the different samples
+        show_mean_std: bool or str
+          show the mean/std values over the different samples. It can either True/False or "rolling".
         show_only_mcmc: int or list
           only show chains given their number
         no_cache: bool
@@ -418,7 +419,7 @@ def plot_chains(
             if samples.shape[0] < min_chain_size:
                 min_chain_size = samples.shape[0]
             for i, p in enumerate(selected_params):
-                axes[i].set_ylabel(r"${}$".format(lookup[p].get("label")))
+                axes[i].set_ylabel(rf"${lookup[p].get('label')}$")
                 y = samples[:, lookup[p].get("pos")]
                 x = np.arange(len(y))
                 idx_burnin = -int(highlight_burnin * len(y))
@@ -433,12 +434,32 @@ def plot_chains(
                 chains.setdefault(p, []).append(y)
 
         if show_mean_std:
+
+            def _moving_average(x, w):
+                return np.convolve(x, np.ones(w), "valid") / w
+
             for i, p in enumerate(selected_params):
-                data = np.array([chain[:min_chain_size] for chain in chains[p]])
-                mu, std = np.mean(data), np.std(data)
-                axes[i].axhline(mu, color="0.6", lw=1)
-                for sign in [-1, +1]:
-                    axes[i].axhline(mu + std * sign, color="0.6", ls="--", lw=1)
+                if show_mean_std == "rolling":
+                    max_size = np.max([chain.size for chain in chains[p]])
+                    data = np.full((len(chains[p]), max_size), np.nan)
+                    for j, chain in enumerate(chains[p]):
+                        data[j, : len(chain)] = chain
+                    x = np.arange(max_size)
+                    mu, std = np.nanmean(data, axis=0), np.nanstd(data, axis=0)
+                    std[std == 0.0] = np.nan
+                    window = int(0.2 * max_size)
+                    x = _moving_average(x, window)
+                    mu = _moving_average(mu, window)
+                    std = _moving_average(std, window)
+                    axes[i].plot(x, mu, color="0.6", lw=1)
+                    for sign in [-1, +1]:
+                        axes[i].plot(x, mu + std * sign, color="0.6", ls="--", lw=1)
+                else:
+                    data = np.array([chain[:min_chain_size] for chain in chains[p]])
+                    mu, std = np.mean(data), np.std(data)
+                    axes[i].axhline(mu, color="0.6", lw=1)
+                    for sign in [-1, +1]:
+                        axes[i].axhline(mu + std * sign, color="0.6", ls="--", lw=1)
 
         # Remove axes with no data inside
         _ = [fig.delaxes(ax) for ax in axes if not len(ax.get_lines())]
@@ -528,7 +549,9 @@ def plot_progress(mcmc_samples, sharex=True, share_fig=False):
     return fig
 
 
-def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False, column_width="150px"):
+def get_sampled_parameters(
+    mcmc_samples, prefix="mcmc", return_params=False, with_priors=False, column_width="150px"
+):
     """Print MCMC sampled parameters
 
     Parameters
@@ -545,10 +568,12 @@ def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False, col
     """
 
     create_symlink(mcmc_samples, prefix)
-    r1 = re.compile(r".*mcmc\] \*.*: (.*)")
+    r1 = re.compile(r".*mcmc\] \*.*[0-9+] : (.*)")
     r2 = re.compile(r".*model\].*Input: (.*)")
 
-    latex_params = {}
+    rprior = re.compile(r".*lambda (.*):.*stats.norm.logpdf.*loc=(.*),.*scale=(.*).*\)")
+
+    params_info = {}
     sampled_params = {}
     for name, value in mcmc_samples.items():
         path = _get_path(name, value)
@@ -573,13 +598,44 @@ def get_sampled_parameters(mcmc_samples, prefix="mcmc", return_params=False, col
                     continue
                 params = eval(found[0])
                 sampled_params.setdefault(name, []).extend(params)
-                latex_params.setdefault(name, []).extend(
+                params_info.setdefault((name, "parameter"), []).extend(
                     [latex_table.get(par, par) for par in params]
                 )
                 if "Sampling!" in line:
                     break
+        if not with_priors:
+            continue
 
-    df = pd.DataFrame.from_dict(latex_params, orient="index").T.fillna("")
+        # Get priors
+        external_priors = {}
+        for k, v in updated_yaml.get("prior", {}).items():
+            found = rprior.findall(v)
+            if len(found) == 0:
+                continue
+            param, loc, scale = found[0]
+            external_priors[param] = f"$\mathcal{{G}}({float(loc)}, {float(scale)})$"
+        for param in sampled_params.get(name, []):
+            if param not in (params := updated_yaml.get("params")):
+                raise ValueError("Sampled paremeter can not be found within input parameters !")
+
+            if param in external_priors:
+                params_info.setdefault((name, "prior"), []).append(external_priors[param])
+                continue
+
+            input_priors = params.get(param).get("prior", {})
+            if dist := input_priors.get("dist"):
+                if dist == "norm":
+                    loc, scale = input_priors.get("loc"), input_priors.get("scale")
+                    params_info.setdefault((name, "prior"), []).append(
+                        f"$\mathcal{{G}}({loc}, {scale})$"
+                    )
+            elif input_priors.get("min") or input_priors.get("max"):
+                min, max = input_priors.get("min"), input_priors.get("max")
+                params_info.setdefault((name, "prior"), []).append(f"$\mathcal{{U}}({min}, {max})$")
+
+    # print(params_info)
+    df = pd.DataFrame.from_dict(params_info, orient="index").T.fillna("").drop_duplicates()
+    df.columns = params_info.keys() if with_priors else sampled_params.keys()
     df = df.style.set_properties(width=column_width)
     if return_params:
         return df, sampled_params
