@@ -152,7 +152,7 @@ def get_default_settings(colors=None, linewidth=1, num_plot_contours=3):
     plot_settings.linewidth = linewidth
     plot_settings.legend_fontsize = 15
     plot_settings.legend_colored_text = True
-    plot_settings.figure_legend_loc = "best"
+    # plot_settings.figure_legend_loc = "best"
     plot_settings.scaling = False
     return plot_settings
 
