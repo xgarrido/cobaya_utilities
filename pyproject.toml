@@ -1,14 +1,44 @@
 [build-system]
-requires = ["setuptools>=40.6.0", "wheel", "setuptools_scm", "versioneer[toml]"]
+requires = ["setuptools>=40.6.0", "wheel", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
 
-[tool.versioneer]
-VCS = "git"
-style = "pep440"
-versionfile_source = "cobaya_utilities/_version.py"
-versionfile_build = "cobaya_utilities/_version.py"
-tag_prefix = "v"
-parentdir_prefix = "cobaya_utilities-"
+[project]
+name = "cobaya_utilities"
+dynamic = ["version"]
+authors = [{ name = "Xavier Garrido" }]
+description = "A set of functions to deal with MCMC output from cobaya"
+readme = "README.rst"
+license = { file = "LICENSE" }
+keywords = ["cobaya", "MCMC", "plot"]
+classifiers = [
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: BSD License",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: Visualization",
+  "Topic :: Education",
+]
+requires-python = ">=3.9.0"
+dependencies = ["cobaya>=3.4.1", "seaborn", "tqdm"]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-cov", "camb", "mflike"]
+notebook = ["jupyter", "camb", "latex2mathml"]
+
+[project.urls]
+Homepage = "https://github.com/xgarrido/cobaya_utilities"
+Documentation = "https://cobaya_utilities.readthedocs.io"
+Source = "https://github.com/xgarrido/cobaya_utilities"
+Tracker = "https://github.com/xgarrido/cobaya_utilities/issues"
+Licensing = "https://github.com/xgarrido/cobaya_utilities/blob/master/LICENCE"
+
+[tool.setuptools_scm]
+version_file = "cobaya_utilities/_version.py"
+
+[tool.setuptools.packages.find]
+exclude = ["binder", "docs", "tests"]
 
 [tool.black]
 line-length = 100

@@ -1,3 +1,7 @@
-from . import _version
+from importlib.metadata import PackageNotFoundError, version
 
-__version__ = _version.get_versions()["version"]
+try:
+    __version__ = version("cobaya_utilities")
+except PackageNotFoundError:
+    # package is not installed
+    pass
