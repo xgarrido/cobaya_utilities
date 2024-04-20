@@ -24,7 +24,7 @@ requires-python = ">=3.9.0"
 dependencies = ["cobaya>=3.4.1", "seaborn", "tqdm"]
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-cov", "camb"]
+test = ["pytest", "pytest-cov", "camb", "mflike"]
 notebook = ["jupyter", "camb", "latex2mathml"]
 
 [project.urls]
