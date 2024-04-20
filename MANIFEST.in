@@ -1,0 +1,6 @@
+include cobaya_utilities/_version.py
+
+exclude .git*
+exclude codecov.yml
+
+prune .github
