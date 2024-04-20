@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cobaya_utilities"
 dynamic = ["version"]
-authors = ["Xavier Garrido"]
+authors = [{ name = "Xavier Garrido" }]
 description = "A set of functions to deal with MCMC output from cobaya"
 readme = "README.rst"
 license = { file = "LICENSE" }
