@@ -613,7 +613,7 @@ def get_sampled_parameters(
             if len(found) == 0:
                 continue
             param, loc, scale = found[0]
-            external_priors[param] = f"$\mathcal{{G}}({float(loc)}, {float(scale)})$"
+            external_priors[param] = rf"$\mathcal{{G}}({float(loc)}, {float(scale)})$"
         for param in sampled_params.get(name, []):
             if param not in (params := updated_yaml.get("params")):
                 raise ValueError("Sampled paremeter can not be found within input parameters !")
@@ -627,11 +627,13 @@ def get_sampled_parameters(
                 if dist == "norm":
                     loc, scale = input_priors.get("loc"), input_priors.get("scale")
                     params_info.setdefault((name, "prior"), []).append(
-                        f"$\mathcal{{G}}({loc}, {scale})$"
+                        rf"$\mathcal{{G}}({loc}, {scale})$"
                     )
             elif input_priors.get("min") or input_priors.get("max"):
                 min, max = input_priors.get("min"), input_priors.get("max")
-                params_info.setdefault((name, "prior"), []).append(f"$\mathcal{{U}}({min}, {max})$")
+                params_info.setdefault((name, "prior"), []).append(
+                    rf"$\mathcal{{U}}({min}, {max})$"
+                )
 
     # print(params_info)
     df = pd.DataFrame.from_dict(params_info, orient="index").T.fillna("").drop_duplicates()

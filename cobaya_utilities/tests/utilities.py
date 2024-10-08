@@ -70,7 +70,8 @@ def generate_mcmc():
 
 
 def generate_pickle(data):
-    pickle.dump(data, open(os.path.join(data_path, "reference.pkl"), "wb"))
+    with open(os.path.join(data_path, "reference.pkl"), "wb") as f:
+        pickle.dump(data, f)
 
 
 def get_reference():
@@ -135,7 +136,7 @@ nuisance_params = {
 
 all_params = {**cosmo_params, **nuisance_params}
 
-likelihood_name = "mflike.MFLike"
+likelihood_name = "mflike.TTTEEE"
 likelihood_config = {
     "input_file": "LAT_simu_sacc_00000.fits",
     "cov_Bbl_file": "data_sacc_w_covar_and_Bbl.fits",

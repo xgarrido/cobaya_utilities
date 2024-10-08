@@ -76,13 +76,17 @@ def compute_fisher_matrix(
         **likelihood_info,
         **{
             "params": _get_sampled_params(params),
-            "theory": {"camb": {"extra_args": {"lens_potential_accuracy": 1}}},
+            "theory": {
+                "camb": {"extra_args": {"lens_potential_accuracy": 1}},
+                "mflike.BandpowerForeground": None,
+            },
         },
     }
 
     model = get_model(info, packages_path=packages_path)
     likelihood = model.likelihood[likelihood_name]
     theory = model.theory["camb"]
+    foregrounds = model.theory["mflike.BandpowerForeground"]
 
     # First grab the constant params and then update with the sampled one. We finally check for
     # missing parameters
@@ -107,7 +111,9 @@ def compute_fisher_matrix(
                 }
             )
             model.logposterior(point)
-            return likelihood._get_power_spectra(theory.get_Cl(ell_factor=True), **point)
+            return likelihood._get_power_spectra(
+                theory.get_Cl(ell_factor=True), foregrounds.get_fg_totals(), **point
+            )
 
         delta = (_get_power_spectra(+epsilon) - _get_power_spectra(-epsilon)) / 2 / epsilon
         if defaults[param] != 0:

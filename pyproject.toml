@@ -21,7 +21,7 @@ classifiers = [
   "Topic :: Education",
 ]
 requires-python = ">=3.9.0"
-dependencies = ["cobaya>=3.4.1", "seaborn", "tqdm"]
+dependencies = ["cobaya>=3.4.1", "seaborn", "tqdm", "jinja2"]
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-cov", "camb", "mflike"]
