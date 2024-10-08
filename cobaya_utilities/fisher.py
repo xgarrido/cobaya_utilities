@@ -77,9 +77,8 @@ def compute_fisher_matrix(
         **{
             "params": _get_sampled_params(params),
             "theory": {
-                "camb": {
-                    "extra_args": {"lens_potential_accuracy": 1}
-                },"mflike.BandpowerForeground": None,
+                "camb": {"extra_args": {"lens_potential_accuracy": 1}},
+                "mflike.BandpowerForeground": None,
             },
         },
     }
