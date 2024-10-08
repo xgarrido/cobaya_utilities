@@ -70,7 +70,8 @@ def generate_mcmc():
 
 
 def generate_pickle(data):
-    pickle.dump(data, open(os.path.join(data_path, "reference.pkl"), "wb"))
+    with open(os.path.join(data_path, "reference.pkl"), "wb") as f:
+        pickle.dump(data, f)
 
 
 def get_reference():
