@@ -312,32 +312,32 @@ def plot_chains(
 ):
     """Plot MCMC sample evolution
 
-        Parameters
-        ----------
-        mcmc_samples: dict
-          a dict holding a name as key for the sample and a corresponding directory as value
-          or a dict configuration
-        params: dict or list
-          a dict holding the parameter names for the different mcmc_samples or
-          a unique list of parameter names
-        ncol: int
-          the number of columns within the plot
-        highlight_burnin: float
-          the fraction of samples to highlight (below the burnin value, the color is faded)
-        ignore_rows: float
-          the fraction of samples to ignore
-        show_mean_std: bool or str
-          show the mean/std values over the different samples. It can either True/False or "rolling".
-        show_only_mcmc: int or list
-          only show chains given their number
-        no_cache: bool
-          remove the getdist cache
-        markers: dict
-    :      dictionnary holding the "expected" value for a parameter
-        markers_args: dict
-          marker kwargs to pass to plt.axhline
-        prefix: str
-          prefix name of chains
+    Parameters
+    ----------
+    mcmc_samples: dict
+      a dict holding a name as key for the sample and a corresponding directory as value
+      or a dict configuration
+    params: dict or list
+      a dict holding the parameter names for the different mcmc_samples or
+      a unique list of parameter names
+    ncol: int
+      the number of columns within the plot
+    highlight_burnin: float
+      the fraction of samples to highlight (below the burnin value, the color is faded)
+    ignore_rows: float
+      the fraction of samples to ignore
+    show_mean_std: bool or str
+      show the mean/std values over the different samples. It can either True/False or "rolling".
+    show_only_mcmc: int or list
+      only show chains given their number
+    no_cache: bool
+      remove the getdist cache
+    markers: dict
+      dictionnary holding the "expected" value for a parameter
+    markers_args: dict
+      marker kwargs to pass to plt.axhline
+    prefix: str
+      prefix name of chains
     """
     create_symlink(mcmc_samples, prefix)
     from getdist import loadMCSamples
@@ -409,7 +409,6 @@ def plot_chains(
                 fig, axes = plt.subplots(nrow, ncol, sharex=True, figsize=(16, 2 * nrow))
                 axes = axes.flatten()
 
-            color = f"C{int(imcmc)-1}"
             # if color_name:
             #     if color_name not in color_palettes:
             #         color_palettes[color_name] = sns.blend_palette(
@@ -419,11 +418,17 @@ def plot_chains(
             if samples.shape[0] < min_chain_size:
                 min_chain_size = samples.shape[0]
             for i, p in enumerate(selected_params):
+                # In case a parameter has not moved, getdist remove it from the list of parameters
+                if p not in lookup:
+                    continue
+
                 axes[i].set_ylabel(rf"${lookup[p].get('label')}$")
                 y = samples[:, lookup[p].get("pos")]
                 x = np.arange(len(y))
                 idx_burnin = -int(highlight_burnin * len(y))
-                axes[i].plot(x[idx_burnin:], y[idx_burnin:], alpha=0.75, color=color)
+                axes[i].plot(
+                    x[idx_burnin:], y[idx_burnin:], alpha=0.75, color=(color := f"C{int(imcmc)-1}")
+                )
                 if highlight_burnin > 0.0:
                     axes[i].plot(x[: idx_burnin + 1], y[: idx_burnin + 1], alpha=0.25, color=color)
                 if p in markers:
@@ -613,7 +618,7 @@ def get_sampled_parameters(
             if len(found) == 0:
                 continue
             param, loc, scale = found[0]
-            external_priors[param] = rf"$\mathcal{{G}}({float(loc)}, {float(scale)})$"
+            external_priors[param] = f"$\mathcal{{G}}({float(loc)}, {float(scale)})$"
         for param in sampled_params.get(name, []):
             if param not in (params := updated_yaml.get("params")):
                 raise ValueError("Sampled paremeter can not be found within input parameters !")
@@ -627,13 +632,11 @@ def get_sampled_parameters(
                 if dist == "norm":
                     loc, scale = input_priors.get("loc"), input_priors.get("scale")
                     params_info.setdefault((name, "prior"), []).append(
-                        rf"$\mathcal{{G}}({loc}, {scale})$"
+                        f"$\mathcal{{G}}({loc}, {scale})$"
                     )
             elif input_priors.get("min") or input_priors.get("max"):
                 min, max = input_priors.get("min"), input_priors.get("max")
-                params_info.setdefault((name, "prior"), []).append(
-                    rf"$\mathcal{{U}}({min}, {max})$"
-                )
+                params_info.setdefault((name, "prior"), []).append(f"$\mathcal{{U}}({min}, {max})$")
 
     # print(params_info)
     df = pd.DataFrame.from_dict(params_info, orient="index").T.fillna("").drop_duplicates()
