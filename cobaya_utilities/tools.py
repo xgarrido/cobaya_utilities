@@ -1,6 +1,7 @@
 import glob
 import os
 import re
+import warnings
 from itertools import product
 
 import matplotlib.pyplot as plt
@@ -528,13 +529,15 @@ def plot_progress(mcmc_samples, sharex=True, share_fig=False):
             axes[ix, 1].plot(df.N, df.acceptance_rate, "-o", **kwargs)
             axes[ix, 1].set_ylabel(r"acceptance rate")
         if len(files) > 1:
-            leg = axes[i, 1].legend(
-                title=name,
-                bbox_to_anchor=(1, 1),
-                loc="upper left",
-                labelcolor="linecolor",
-                alignment="left",
-            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                leg = axes[i, 1].legend(
+                    title=name,
+                    bbox_to_anchor=(1, 1),
+                    loc="upper left",
+                    labelcolor="linecolor",
+                    alignment="left",
+                )
     if share_fig:
         leg = fig.legend(
             [Line2D([0], [0], color=f"C{i}") for i, _ in enumerate(mcmc_samples)],
