@@ -565,14 +565,16 @@ def plot_mean_distributions(
         ax = axes[i]
         if not ax:
             continue
-        means, sigmas = np.empty(nsamples), np.empty(nsamples)
+        means, sigmas = np.full(nsamples, np.nan), np.full(nsamples, np.nan)
         for j, sample in enumerate(samples):
             marge = sample.getMargeStats()
             par = marge.parWithName(name)
-            means[j], sigmas[j] = par.mean, par.err
+            if par:
+                means[j], sigmas[j] = par.mean, par.err
         mu = np.average(means, weights=1 / sigmas**2)
-        sigma = np.mean(sigmas)
-        sigma = np.std(means)
+        mu = np.nansum(means / sigmas**2) / np.nansum(1 / sigmas**2)
+        # sigma = np.nanmean(sigmas)
+        sigma = np.nanstd(means)
         x = np.linspace(*ax.get_xlim(), 100)
         y = stats.norm.pdf(x, mu, sigma)
         ax.plot(x, y / y.max(), color="black", lw=2.5)
@@ -674,3 +676,4 @@ def plot_correlation_matrix(samples, params, nx=None, figsize=None):
             ax=ax,
             cbar=False,
         )
+    return fig
