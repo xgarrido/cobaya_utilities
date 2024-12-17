@@ -132,7 +132,8 @@ def print_chains_size(
         else:
             r = re.compile(r"\[mcmc\] Progress @ (.*) : (.*) steps taken, and (.*) accepted.")
             for fn in sorted(files):
-                total_steps = 0
+                total_steps = {}
+                irun = 0
                 idx = 1 if not (m := regex_log.match(fn)) else m.group(1)
                 mcmc_name = f"mcmc {idx}"
                 data.setdefault(name, {}).update({(mcmc_name, "status"): "running"})
@@ -147,11 +148,10 @@ def print_chains_size(
                         time, current_steps, accepted_steps = found[0]
 
                         current_steps = int(current_steps)
-                        total_steps = (
-                            current_steps
-                            if current_steps > total_steps
-                            else total_steps + current_steps
-                        )
+                        if irun in total_steps and total_steps[irun] > current_steps:
+                            irun += 1
+                        total_steps[irun] = current_steps
+                total_steps = sum(total_steps.values())
                 accepted_steps = int(accepted_steps)
                 rate = accepted_steps / total_steps if total_steps != 0 else None
                 for field, content in zip(
