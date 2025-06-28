@@ -262,6 +262,10 @@ def get_mc_samples(
     from getdist import loadMCSamples
     from tqdm.auto import tqdm
 
+    from .tools import create_symlink
+
+    create_symlink(mcmc_samples, prefix)
+
     selected = selected or list(mcmc_samples.keys())
     excluded = excluded or []
 
