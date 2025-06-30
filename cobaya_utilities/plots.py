@@ -202,7 +202,11 @@ def plots_1d(*args, **kwargs):
 
     if legend_labels:
         default_kwargs = dict(
-            bbox_to_anchor=(0.5, 1.025), labelcolor="linecolor", loc="center", fontsize="x-large"
+            bbox_to_anchor=(0.5, 1.025),
+            labelcolor="linecolor",
+            loc="center",
+            fontsize="x-large",
+            handlelength=0,
         )
         kwargs = default_kwargs | {
             k.replace("legend_", ""): v for k, v in kwargs.items() if k.startswith("legend")
