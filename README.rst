@@ -19,10 +19,12 @@ A set of tools to deal with MCMC chains and a complement to `cobaya
 .. image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/xgarrido/cobaya_utilities/master
 
-
 .. image:: https://codecov.io/gh/xgarrido/cobaya_utilities/branch/master/graph/badge.svg?token=qrrVcbNCs5
    :target: https://codecov.io/gh/xgarrido/cobaya_utilities
 
+.. image:: https://results.pre-commit.ci/badge/github/xgarrido/cobaya_utilities/master.svg
+   :target: https://results.pre-commit.ci/latest/github/xgarrido/cobaya_utilities/master
+   :alt: pre-commit.ci status
 
 Installing the code
 -------------------
