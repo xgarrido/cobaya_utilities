@@ -116,7 +116,7 @@ def set_style(
 
         matplotlib_inline.backend_inline.set_matplotlib_formats("svg")
 
-    rc = rc or {"axes.spines.top": False, "axes.spines.right": False}
+    rc = rc or {"axes.spines.top": False, "axes.spines.right": False, "legend.frameon": False}
     if use_tex:
         rc.update({"text.usetex": True})
     if use_seaborn:
@@ -152,6 +152,7 @@ def get_default_settings(colors=None, linewidth=1, num_plot_contours=3):
     plot_settings.linewidth = linewidth
     plot_settings.legend_fontsize = 15
     plot_settings.legend_colored_text = True
+    plot_settings.legend_frame = False
     # plot_settings.figure_legend_loc = "best"
     plot_settings.scaling = False
     return plot_settings
@@ -181,8 +182,7 @@ def plots_1d(*args, **kwargs):
     default_plotter_options = {"width_inch": 4}
     plotter_kwargs = {k: kwargs.get(k, v) for k, v in default_plotter_options.items()}
 
-    if legend_kwargs := kwargs.get("legend_kwargs"):
-        legend_labels = kwargs.get("legend_labels")
+    if legend_labels := kwargs.get("legend_labels"):
         kwargs.update(dict(legend_labels=[]))
 
     g = get_subplot_plotter(settings=get_default_settings(), **plotter_kwargs)
@@ -200,8 +200,15 @@ def plots_1d(*args, **kwargs):
     if kwargs.get("despine", True):
         despine(g, all_axes=True)
 
-    if legend_kwargs:
-        g.add_legend(legend_labels, **legend_kwargs)
+    if legend_labels:
+        default_kwargs = dict(
+            bbox_to_anchor=(0.5, 1.025), labelcolor="linecolor", loc="center", fontsize="x-large"
+        )
+        kwargs = default_kwargs | {
+            k.replace("legend_", ""): v for k, v in kwargs.items() if k.startswith("legend")
+        }
+        kwargs.update(labels=legend_labels)
+        g.fig.legend(**kwargs)
 
     return g
 
