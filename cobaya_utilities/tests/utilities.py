@@ -131,6 +131,8 @@ nuisance_params = {
     "a_psee": 0.0,
     "a_pste": 0.0,
     "xi": 0.10,
+    "beta_s": dict(value=-2.50),
+    "alpha_tSZ": dict(value=0.0),
     "T_d": 9.60,
 }
 

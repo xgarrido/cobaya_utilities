@@ -18,12 +18,16 @@ _cached_fisher_matrix = None
 
 def _get_sampled_params(params):
     sampled_params = deepcopy(params)
-    sampled_params.update(
-        {
-            k: {"prior": {"min": 0.9 * v if v != 0 else -0.5, "max": 1.1 * v if v != 0 else +0.5}}
-            for k, v in sampled_params.items()
-        }
-    )
+    for k, v in params.items():
+        if isinstance(v, (float, int)):
+            vmin = 0.9 * v if v != 0 else -0.5
+            vmax = 1.1 * v if v != 0 else +0.5
+            if vmin > vmax:
+                vmin, vmax = vmax, vmin
+            state = {"prior": {"min": vmin, "max": vmax}}
+        else:
+            state = v
+        sampled_params.update({k: state})
     # Special treatment for logA and As
     if "logA" in params:
         sampled_params["logA"].update({"drop": True})
@@ -88,16 +92,21 @@ def compute_fisher_matrix(
     theory = model.theory["camb"]
     foregrounds = model.theory["mflike.BandpowerForeground"]
 
+    # Update params list and only keep non constant
+    sampled_params = {
+        k: v for k, v in params.items() if k in model.parameterization.sampled_params()
+    }
+
     # First grab the constant params and then update with the sampled one. We finally check for
     # missing parameters
     defaults = model.parameterization.constant_params()
-    defaults.update({k: params.get(k) for k in model.parameterization.sampled_params().keys()})
+    defaults.update(sampled_params)
     for k, v in defaults.items():
         if v is None:
             raise ValueError(f"Parameter '{k}' must be set!")
 
     deriv = {}
-    for param in params:
+    for param in sampled_params:
 
         def _get_power_spectra(epsilon):
             point = defaults.copy()
@@ -145,7 +154,7 @@ def compute_fisher_matrix(
         f"${_cosmo_labels.get(name, model.parameterization.labels().get(name))}$"
         for name in fisher_params
     ]
-    values = np.array(list(params.values()))
+    values = np.array(list(sampled_params.values()))
     sigmas = np.sqrt(np.diag(_cached_fisher_matrix))
     signal_over_noise = values / sigmas
 
@@ -156,7 +165,7 @@ def compute_fisher_matrix(
         index=labels,
         columns=["value", r"$\sigma$", "S/N"],
     )
-    summary["param"] = list(params.keys())
+    summary["param"] = list(sampled_params.keys())
     _cached_fisher_matrix = pd.DataFrame(data=_cached_fisher_matrix, index=labels, columns=labels)
     if verbose:
         logger.info(f"Computing fisher matrix done")
