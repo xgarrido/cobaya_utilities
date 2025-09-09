@@ -142,6 +142,8 @@ def compute_fisher_matrix(
     fisher_matrix = np.empty((nparams, nparams))
     for i1, p1 in enumerate(fisher_params):
         for i2, p2 in enumerate(fisher_params):
+            print(p1, p2)
+            print(deriv[p1], deriv[p2], likelihood.inv_cov.shape)
             fisher_matrix[i1, i2] = deriv[p1] @ likelihood.inv_cov @ deriv[p2]
     _cached_fisher_matrix = np.linalg.inv(fisher_matrix)
 
