@@ -102,6 +102,8 @@ def compute_fisher_matrix(
 
     deriv = {}
     for param in params:
+        if param in model.parameterization.constant_params():
+            continue
 
         def _get_power_spectra(epsilon):
             point = defaults.copy()
