@@ -92,18 +92,19 @@ def compute_fisher_matrix(
     theory = model.theory["camb"]
     foregrounds = model.theory["mflike.BandpowerForeground"]
 
+    # Update params list and only keep non constant
+    sampled_params = {k: v for k, v in params.items() if k in model.parameterization.sampled_params()} 
+
     # First grab the constant params and then update with the sampled one. We finally check for
     # missing parameters
     defaults = model.parameterization.constant_params()
-    defaults.update({k: params.get(k) for k in model.parameterization.sampled_params().keys()})
+    defaults.update(sampled_params)
     for k, v in defaults.items():
         if v is None:
             raise ValueError(f"Parameter '{k}' must be set!")
 
     deriv = {}
-    for param in params:
-        if param in model.parameterization.constant_params():
-            continue
+    for param in sampled_params:
 
         def _get_power_spectra(epsilon):
             point = defaults.copy()
@@ -142,8 +143,6 @@ def compute_fisher_matrix(
     fisher_matrix = np.empty((nparams, nparams))
     for i1, p1 in enumerate(fisher_params):
         for i2, p2 in enumerate(fisher_params):
-            print(p1, p2)
-            print(deriv[p1], deriv[p2], likelihood.inv_cov.shape)
             fisher_matrix[i1, i2] = deriv[p1] @ likelihood.inv_cov @ deriv[p2]
     _cached_fisher_matrix = np.linalg.inv(fisher_matrix)
 
@@ -153,7 +152,7 @@ def compute_fisher_matrix(
         f"${_cosmo_labels.get(name, model.parameterization.labels().get(name))}$"
         for name in fisher_params
     ]
-    values = np.array(list(params.values()))
+    values = np.array(list(sampled_params.values()))
     sigmas = np.sqrt(np.diag(_cached_fisher_matrix))
     signal_over_noise = values / sigmas
 
