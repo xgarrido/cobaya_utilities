@@ -27,7 +27,7 @@ def _get_sampled_params(params):
             state = {"prior": {"min": vmin, "max": vmax}}
         else:
             state = v
-    sampled_params.update(state)
+        sampled_params.update(state)
     # Special treatment for logA and As
     if "logA" in params:
         sampled_params["logA"].update({"drop": True})
