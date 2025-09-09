@@ -18,7 +18,7 @@ _cached_fisher_matrix = None
 
 def _get_sampled_params(params):
     sampled_params = deepcopy(params)
-    for k, v in sampled_params.items():
+    for k, v in params.items():
         if isinstance(v, (float, int)):
             vmin = 0.9 * v if v != 0 else -0.5
             vmax = 1.1 * v if v != 0 else +0.5
