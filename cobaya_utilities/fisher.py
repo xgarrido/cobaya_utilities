@@ -140,7 +140,6 @@ def compute_fisher_matrix(
         if verbose:
             logger.info(f"Computing parameter '{param}' done")
 
-    print("debug0")
     fisher_params = list(deriv.keys())
     nparams = len(fisher_params)
     fisher_matrix = np.empty((nparams, nparams))
@@ -159,7 +158,6 @@ def compute_fisher_matrix(
     sigmas = np.sqrt(np.diag(_cached_fisher_matrix))
     signal_over_noise = values / sigmas
 
-    print("debug1")
     format_array = lambda array: [_formatter.formatNumber(n) for n in array]
     # [format_array(values), format_array(sigmas), format_array(signal_over_noise)]
     summary = pd.DataFrame(
