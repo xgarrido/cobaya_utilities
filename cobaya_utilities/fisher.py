@@ -93,7 +93,9 @@ def compute_fisher_matrix(
     foregrounds = model.theory["mflike.BandpowerForeground"]
 
     # Update params list and only keep non constant
-    sampled_params = {k: v for k, v in params.items() if k in model.parameterization.sampled_params()} 
+    sampled_params = {
+        k: v for k, v in params.items() if k in model.parameterization.sampled_params()
+    }
 
     # First grab the constant params and then update with the sampled one. We finally check for
     # missing parameters
