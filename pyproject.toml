@@ -20,7 +20,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Visualization",
   "Topic :: Education",
 ]
-requires-python = ">=3.9.0"
+requires-python = ">=3.10.0"
 dependencies = ["cobaya>=3.4.1", "seaborn", "tqdm", "jinja2"]
 
 [project.optional-dependencies]
