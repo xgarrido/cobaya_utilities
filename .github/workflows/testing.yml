@@ -28,7 +28,7 @@ jobs:
     - name: Set gfortran link on macos-latest
       if: matrix.os == 'macos-latest'
       run: |
-        ln -s gfortran-12 $(dirname $(which gfortran-12))/gfortran
+        ln -s gfortran-15 $(dirname $(which gfortran-15))/gfortran
         gfortran --version
 
     - name: Install dependencies via pip
