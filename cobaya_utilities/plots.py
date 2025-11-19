@@ -128,7 +128,7 @@ def set_style(
     get_ipython().run_line_magic("matplotlib", backend)
 
 
-def get_default_settings(colors=None, linewidth=1, num_plot_contours=3):
+def get_default_settings(colors=None, linewidth=1, num_plot_contours=3, **kwargs):
     """Set default getdist plot settings
 
     Parameters
@@ -160,7 +160,7 @@ def get_default_settings(colors=None, linewidth=1, num_plot_contours=3):
 
 def triangle_plot(*args, **kwargs):
     """Overloaded triangle_plot function with additional features"""
-    g = get_subplot_plotter(settings=get_default_settings())
+    g = get_subplot_plotter(settings=get_default_settings(**kwargs))
     g.triangle_plot(*args, **kwargs)
 
     if kwargs.get("despine", True):
@@ -185,7 +185,7 @@ def plots_1d(*args, **kwargs):
     if legend_labels := kwargs.get("legend_labels"):
         kwargs.update(dict(legend_labels=[]))
 
-    g = get_subplot_plotter(settings=get_default_settings(), **plotter_kwargs)
+    g = get_subplot_plotter(settings=get_default_settings(**kwargs), **plotter_kwargs)
     g.plots_1d(*args, **kwargs)
 
     if priors := kwargs.get("priors"):
@@ -222,7 +222,7 @@ def plots_2d(*args, **kwargs):
     default_plotter_options = {"width_inch": 4}
     plotter_kwargs = {k: kwargs.get(k, v) for k, v in default_plotter_options.items()}
 
-    g = get_subplot_plotter(settings=get_default_settings(), **plotter_kwargs)
+    g = get_subplot_plotter(settings=get_default_settings(**kwargs), **plotter_kwargs)
     g.plots_2d(*args, **kwargs)
 
     if titles := kwargs.get("titles"):
