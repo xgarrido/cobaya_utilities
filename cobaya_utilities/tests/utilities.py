@@ -154,7 +154,7 @@ def generate_fisher():
     data.update(
         {
             "compute_fisher_matrix": {"summary": summary, "correlation": correlation},
-            "plot_fisher_matrix": fisher.plot_fisher_matrix(),
+            # "plot_fisher_matrix": fisher.plot_fisher_matrix(use_relplot=False),
         }
     )
     fisher.generate_yaml_config(

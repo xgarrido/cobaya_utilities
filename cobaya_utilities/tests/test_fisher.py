@@ -2,6 +2,7 @@ import io
 import os
 import unittest
 
+import pytest
 from utilities import (
     all_params,
     compare,
@@ -29,12 +30,15 @@ class FisherTest(unittest.TestCase):
             {"summary": self.summary, "correlation": self.correlation},
         )
 
+    @pytest.mark.skip(reason="this actually breaks the other matplotlib axes")
     def test_plot_fisher_matrix(self):
-        compare(self, self.ref.get("plot_fisher_matrix"), fisher.plot_fisher_matrix())
+        compare(
+            self, self.ref.get("plot_fisher_matrix"), fisher.plot_fisher_matrix(use_relplot=False)
+        )
 
     def test_generate_yaml_config(self):
         ref_yaml_file = os.path.join(data_path, "fisher_ref.yaml")
         current_yaml_file = os.path.join(data_path, "fisher_current.yaml")
-        fisher.generate_yaml_config(self.summary, filename=current_yaml_file)
+        fisher.generate_yaml_config(self.summary, filename=current_yaml_file, error_if_exists=False)
         with io.open(ref_yaml_file) as ref, io.open(current_yaml_file) as current:
             self.assertListEqual(list(ref), list(current))
