@@ -38,6 +38,8 @@ params:
     latex: \beta
 sampler:
   mcmc:
+    sampler_type: mcmc
+    supports_periodic_params: true
     burn_in: 0
     max_tries: 40d
     covmat: null
@@ -70,6 +72,6 @@ sampler:
     oversample: null
     drag_limits: null
     fallback_covmat_scale: 4
-    version: 3.5.4
+    version: 3.6.1
 output: mcmc
-version: 3.5.4
+version: 3.6.1

@@ -227,9 +227,10 @@ def plot_fisher_matrix(matrix=None, use_relplot=True, reset_cache=False, **matri
             )
             for artist in g.legend.legend_handles:
                 artist.set(markeredgecolor="0.7", markeredgewidth=1)
+        return g.fig.axes
     else:
         mask = np.triu(np.ones_like(matrix, dtype=bool))
-        sns.heatmap(
+        g = sns.heatmap(
             matrix,
             mask=mask,
             cmap=cmap,
@@ -238,7 +239,7 @@ def plot_fisher_matrix(matrix=None, use_relplot=True, reset_cache=False, **matri
             linewidths=0.5,
             cbar_kws={"shrink": 0.5},
         )
-    return g.fig.axes
+        return g.axes
 
 
 def generate_yaml_config(
